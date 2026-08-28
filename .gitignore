@@ -1,0 +1,40 @@
+# Dependencias y artefactos de compilación
+node_modules/
+dist/
+build/
+coverage/
+.nyc_output/
+
+# Variables y secretos locales
+.env
+.env.*
+!.env.example
+
+# Registros y archivos temporales
+*.log
+logs/
+tmp/
+temp/
+*.pid
+*.seed
+
+# Resultados de herramientas
+.eslintcache
+.cache/
+.vitest/
+*.tsbuildinfo
+
+# Bases de datos SQLite locales
+*.db
+*.db-journal
+
+# Editores y sistema operativo
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Prisma generado en ubicaciones no estándar
+src/generated/prisma/

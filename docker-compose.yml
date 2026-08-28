@@ -1,0 +1,33 @@
+# Configuración opcional y exclusiva para demostración local del MVP.
+services:
+  backend:
+    build:
+      context: .
+      target: development
+    environment:
+      NODE_ENV: development
+      PORT: 3000
+      DATABASE_URL: file:./dev.db
+      JWT_ACCESS_SECRET: local-compose-secret-change-before-any-real-deployment
+      ACCESS_TOKEN_TTL: 1h
+      CORS_ORIGINS: http://localhost:5173
+      LOG_LEVEL: info
+    command: ['sh', '-c', 'npm run db:migrate && npm run db:seed && npm run dev']
+    ports:
+      - '127.0.0.1:3000:3000'
+    volumes:
+      - .:/app
+      - /app/node_modules
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:3000/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    init: true
