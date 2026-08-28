@@ -1,8 +1,8 @@
 {
-  "name": "adapta-backend",
+  "name": "sinappsis-backend",
   "version": "0.1.0",
   "private": true,
-  "description": "Backend MVP de ADAPTA",
+  "description": "Backend MVP de Sinappsis",
   "packageManager": "pnpm@11.19.0",
   "main": "dist/server.js",
   "scripts": {
