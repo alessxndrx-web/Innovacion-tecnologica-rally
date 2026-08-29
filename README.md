@@ -1,4 +1,4 @@
-# ADAPTA Backend — MVP
+# Sinappsis Backend — MVP
 
 API REST para demostrar un flujo educativo básico: una persona adulta se registra, crea un estudiante, configura sus apoyos, consulta actividades, completa un intento y revisa el progreso. Está construida con Node.js, TypeScript, Fastify, Prisma y SQLite.
 
