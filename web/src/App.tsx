@@ -26,7 +26,6 @@ import { activityRoutes } from './routes/activity-flow';
  * editando el código.
  */
 const protectedScreens: ReadonlyArray<{ path: string; element: React.JSX.Element }> = [
-  { path: activityRoutes.profileQuestions, element: <ProfileQuestionsPage /> },
   { path: activityRoutes.home, element: <HomePage /> },
   { path: activityRoutes.instruction, element: <InstructionPage /> },
   { path: activityRoutes.sequence, element: <SequenceVisualPage /> },
@@ -40,6 +39,14 @@ const protectedScreens: ReadonlyArray<{ path: string; element: React.JSX.Element
   { path: activityRoutes.rewards, element: <RewardsPage /> },
   { path: activityRoutes.quickMissions, element: <QuickMissionsPage /> },
 ];
+
+const profileQuestionScreens = [
+  { path: activityRoutes.profileQuestions, step: 1 },
+  { path: activityRoutes.profileQuestion2, step: 2 },
+  { path: activityRoutes.profileQuestion3, step: 3 },
+  { path: activityRoutes.profileQuestion4, step: 4 },
+  { path: activityRoutes.profileQuestion5, step: 5 },
+] as const;
 
 /** Direcciones antiguas que ya se compartieron: redirigen en vez de dar 404. */
 const routeAliases: ReadonlyArray<{ from: string; to: string }> = [
@@ -55,6 +62,14 @@ export function App(): React.JSX.Element {
           <Route path={activityRoutes.login} element={<LoginPage />} />
           <Route path={activityRoutes.register} element={<RegisterPage />} />
           <Route path={activityRoutes.questionNotice} element={<QuestionNoticePage />} />
+
+          {profileQuestionScreens.map((screen) => (
+            <Route
+              key={screen.path}
+              path={screen.path}
+              element={<ProfileQuestionsPage step={screen.step} />}
+            />
+          ))}
 
           {protectedScreens.map((screen) => (
             <Route

@@ -3610,6 +3610,10 @@ body {
 }
 
 .profile-questions-card {
+  --profile-theme: #20b2b3;
+  --profile-progress: #0e9fa1;
+  --profile-panel-top: 15.58%;
+  --profile-panel-height: 79.04%;
   position: absolute;
   top: 5.38%;
   left: 4.1%;
@@ -3621,21 +3625,65 @@ body {
   background: #fff;
 }
 
+.profile-questions-card[data-theme='orange'] {
+  --profile-theme: #ff941c;
+  --profile-progress: #c47b3b;
+}
+
+.profile-questions-card[data-theme='purple'] {
+  --profile-theme: #7257a8;
+  --profile-progress: #5e4c88;
+}
+
+.profile-questions-card[data-theme='pink'] {
+  --profile-theme: #ec6683;
+  --profile-progress: #c45172;
+}
+
+.profile-questions-card[data-theme='green'] {
+  --profile-theme: #8bc347;
+  --profile-progress: #78a54d;
+}
+
+.profile-question-step-2,
+.profile-question-step-3,
+.profile-question-step-5 {
+  --profile-panel-top: 22.88%;
+  --profile-panel-height: 65%;
+}
+
+.profile-question-step-4 {
+  --profile-panel-top: 19.04%;
+  --profile-panel-height: 73.08%;
+}
+
 .profile-questions-header {
   position: absolute;
   z-index: 2;
   inset: 0 0 auto;
   height: 11.92%;
   border-radius: min(2.83vw, 5.03vh) min(2.83vw, 5.03vh) 0 0;
-  background: #20b2b3;
+  background: var(--profile-theme);
+}
+
+.profile-questions-avatar-shell {
+  position: absolute;
+  top: 7.3%;
+  left: 0.8%;
+  width: 6.3%;
+  aspect-ratio: 1;
+  overflow: hidden;
+  padding: 0.35%;
+  border-radius: 50%;
+  background: #ec6683;
 }
 
 .profile-questions-avatar {
-  position: absolute;
-  top: 12.1%;
-  left: 1.12%;
-  width: 5.64%;
-  aspect-ratio: 1;
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: contain;
 }
 
 .profile-questions-header h1 {
@@ -3659,7 +3707,7 @@ body {
   justify-content: space-between;
   padding: 0 1.2%;
   border-radius: 30px;
-  background: #0e9fa1;
+  background: var(--profile-progress);
   color: #fff;
 }
 
@@ -3670,9 +3718,16 @@ body {
   justify-content: space-around;
 }
 
-.profile-questions-progress img {
+.profile-questions-progress i {
+  display: block;
   width: min(1.86vw, 3.3vh);
   height: min(1.86vw, 3.3vh);
+  border-radius: 50%;
+  background: rgb(255 255 255 / 42%);
+}
+
+.profile-questions-progress i.is-complete {
+  background: #fff;
 }
 
 .profile-questions-progress strong {
@@ -3707,10 +3762,12 @@ body {
 
 .profile-question-panel {
   position: absolute;
-  top: 15.58%;
+  top: var(--profile-panel-top);
   left: 42.63%;
   width: 50.29%;
-  height: 79.04%;
+  height: var(--profile-panel-height);
+  display: flex;
+  flex-direction: column;
   padding: 4.75% 5.7% 4.2%;
   border: 2.2px solid #d8b68a;
   border-radius: min(2.73vw, 4.86vh);
@@ -3718,23 +3775,24 @@ body {
 }
 
 .profile-question-heading {
-  height: 12.2%;
   display: flex;
-  align-items: center;
+  flex: 0 0 auto;
+  align-items: flex-start;
   gap: 2.4%;
 }
 
 .profile-question-number {
   position: relative;
+  display: grid;
   width: min(4.2vw, 7.47vh);
   aspect-ratio: 1;
   flex: 0 0 min(4.2vw, 7.47vh);
+  place-items: center;
+  border-radius: 50%;
+  background: var(--profile-theme);
 }
 
-.profile-question-number img,
 .profile-question-number b {
-  position: absolute;
-  inset: 0;
   display: grid;
   width: 100%;
   height: 100%;
@@ -3747,17 +3805,29 @@ body {
   font-weight: 400;
 }
 
-.profile-question-heading h2 {
+.profile-question-copy {
+  flex: 1;
+  min-width: 0;
+}
+
+.profile-question-copy h2 {
   margin: 0;
   font-size: clamp(1.45rem, min(1.86vw, 3.3vh), 2.375rem);
   font-weight: 600;
-  white-space: nowrap;
+  line-height: 1.35;
+}
+
+.profile-question-copy p {
+  margin: 0.4em 0 0;
+  color: #222;
+  font-size: clamp(1.05rem, min(1.42vw, 2.52vh), 1.8125rem);
+  line-height: 1.35;
 }
 
 .profile-answer-list {
-  height: 78%;
   display: grid;
-  grid-template-rows: repeat(4, 1fr);
+  flex: 1;
+  min-height: 0;
   gap: 2.5%;
   margin-top: 4.2%;
 }
@@ -3788,6 +3858,10 @@ body {
   border-color: #20b2b3;
 }
 
+.profile-answer:disabled {
+  cursor: default;
+}
+
 .profile-answer.is-selected {
   border-color: #0e9fa1;
   background: #effcfc;
@@ -3801,21 +3875,60 @@ body {
 
 .profile-answer-icon {
   position: relative;
+  display: grid;
   width: min(4.3vw, 7.65vh);
   aspect-ratio: 1;
+  place-items: center;
+  border-radius: 50%;
 }
 
-.profile-answer-icon img {
+.profile-answer-circle {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
 }
 
-.profile-answer-icon img:last-child {
+.profile-answer-glyph {
+  position: absolute;
   inset: 21.6%;
   width: 56.8%;
   height: 56.8%;
+}
+
+.profile-answer-icon > b {
+  color: #fff;
+  font-size: clamp(1.1rem, min(1.5vw, 2.65vh), 1.9rem);
+  font-weight: 600;
+  line-height: 1;
+}
+
+.profile-answer-icon > b.is-small {
+  font-size: clamp(0.75rem, min(1vw, 1.8vh), 1.3rem);
+}
+
+.profile-answer-icon > b.is-dark {
+  color: #111;
+}
+
+.profile-question-step-3 .profile-question-copy h2,
+.profile-question-step-4 .profile-question-copy h2,
+.profile-question-step-5 .profile-question-copy h2 {
+  font-size: clamp(1.25rem, min(1.62vw, 2.87vh), 2.0625rem);
+}
+
+.profile-question-step-2 .profile-answer {
+  font-size: clamp(1.1rem, min(1.56vw, 2.78vh), 2rem);
+}
+
+.profile-question-step-3 .profile-answer-list {
+  gap: 12%;
+  margin-top: 5%;
+}
+
+.profile-question-step-4 .profile-answer,
+.profile-question-step-5 .profile-answer {
+  font-size: clamp(1.05rem, min(1.57vw, 2.78vh), 2rem);
 }
 
 @media (max-width: 900px), (max-aspect-ratio: 4 / 5) {
@@ -4294,11 +4407,12 @@ body {
     border-radius: 28px 28px 0 0;
   }
 
-  .profile-questions-avatar {
+  .profile-questions-avatar-shell {
     top: 12px;
     left: 14px;
     width: 62px;
     height: 62px;
+    padding: 4px;
   }
 
   .profile-questions-header h1 {
@@ -4375,11 +4489,18 @@ body {
     font-size: 1.9rem;
   }
 
-  .profile-question-heading h2 {
+  .profile-question-copy h2,
+  .profile-question-step-3 .profile-question-copy h2,
+  .profile-question-step-4 .profile-question-copy h2,
+  .profile-question-step-5 .profile-question-copy h2 {
     padding-top: 0.4rem;
     font-size: 1.25rem;
     line-height: 1.2;
     white-space: normal;
+  }
+
+  .profile-question-copy p {
+    font-size: 1rem;
   }
 
   .profile-answer-list {

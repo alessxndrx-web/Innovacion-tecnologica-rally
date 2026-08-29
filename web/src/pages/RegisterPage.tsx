@@ -4,6 +4,7 @@ import { messageForError } from '../api/error-messages';
 import kivoLogo from '../assets/kivo-logo.png';
 import type { UserRole } from '../auth/session-storage';
 import { useAuth } from '../auth/useAuth';
+import { hasCompletedProfileQuestions } from '../profile-question-storage';
 import { activityRoutes } from '../routes/activity-flow';
 
 /**
@@ -49,7 +50,14 @@ export function RegisterPage(): React.JSX.Element {
   const [submitting, setSubmitting] = useState(false);
 
   if (status === 'authenticated') {
-    return <Navigate to={activityRoutes.profileQuestions} replace />;
+    return (
+      <Navigate
+        to={
+          hasCompletedProfileQuestions() ? activityRoutes.home : activityRoutes.profileQuestions
+        }
+        replace
+      />
+    );
   }
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
@@ -67,7 +75,10 @@ export function RegisterPage(): React.JSX.Element {
     setSubmitting(true);
     try {
       await signUp({ fullName: trimmedName, email: trimmedEmail, password, role });
-      void navigate(activityRoutes.profileQuestions, { replace: true });
+      void navigate(
+        hasCompletedProfileQuestions() ? activityRoutes.home : activityRoutes.profileQuestions,
+        { replace: true },
+      );
     } catch (caught) {
       setError(
         messageForError(caught, {
