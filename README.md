@@ -32,7 +32,24 @@ En PowerShell, copie el entorno con `Copy-Item .env.example .env`. El seed carga
 | `CORS_ORIGINS`      | `http://localhost:5173`   | Orígenes permitidos, separados por comas          |
 | `LOG_LEVEL`         | `info`                    | Nivel de logs                                     |
 
+Variables adicionales, todas con valor por defecto:
+
+| Variable                 | Defecto       | Uso                                                            |
+| ------------------------ | ------------- | -------------------------------------------------------------- |
+| `TRUST_PROXY`            | `false`       | Póngala en `true` solo detrás de un balanceador o CDN          |
+| `RATE_LIMIT_MAX`         | `100`         | Peticiones por IP y ventana en el resto de la API              |
+| `RATE_LIMIT_WINDOW`      | `1m`          | Ventana del límite general                                     |
+| `AUTH_RATE_LIMIT_MAX`    | `10`          | Peticiones a `/auth/register` y `/auth/login` por IP y ventana |
+| `AUTH_RATE_LIMIT_WINDOW` | `15m`         | Ventana del límite de autenticación                            |
+| `ENABLE_DOCS`            | según entorno | Documentación OpenAPI en `/docs`; activa salvo en producción   |
+
 Cambie `JWT_ACCESS_SECRET` antes de iniciar. Puede generar uno con `openssl rand -base64 48`.
+En producción el arranque falla si conserva un secreto de ejemplo o si `CORS_ORIGINS` es `*`.
+
+`TRUST_PROXY` importa para la seguridad: si la API queda detrás de un proxy y no
+se activa, la limitación por IP verá siempre la del proxy y tratará a todos los
+clientes como uno solo. Si se activa sin que haya un proxy de confianza delante,
+cualquiera puede falsear su IP con una cabecera `X-Forwarded-For`.
 
 ## Ejecución y comprobaciones
 
@@ -55,8 +72,17 @@ pnpm format:check
 pnpm lint
 pnpm typecheck
 pnpm test
+pnpm test:integration
 pnpm build
 ```
+
+`pnpm test` cubre la lógica pura (adaptación y puntuación). `pnpm test:integration`
+levanta la API completa sobre `prisma/test.db`, que reconstruye desde cero en cada
+ejecución, y cubre autenticación, aislamiento entre cuentas, el flujo de intentos y
+el formato de los errores de protocolo. Ambas suites y la compilación se ejecutan en
+GitHub Actions en cada push y pull request.
+
+Con la documentación activa, el explorador OpenAPI queda en `http://localhost:3000/docs`.
 
 Para ejecutar la compilación generada:
 
@@ -168,14 +194,54 @@ curl -sS -H "Authorization: Bearer $ACCESS_TOKEN" \
   "$API_URL/api/v1/learners/$LEARNER_ID/progress" | jq
 ```
 
-La puntuación se calcula en el servidor como respuestas evaluables correctas entre respuestas evaluables totales, multiplicado por 100. Las bandas son 1 estrella para 0–49, 2 para 50–79 y 3 para 80–100. El cliente no envía el resultado final.
+Para abandonar un intento en curso en lugar de completarlo:
+
+```bash
+curl -sS -X POST \
+  -H "Authorization: Bearer $ACCESS_TOKEN" \
+  "$API_URL/api/v1/learners/$LEARNER_ID/attempts/$ATTEMPT_ID/abandon" | jq
+```
+
+La puntuación se calcula en el servidor como respuestas correctas entre **pasos
+evaluables de la actividad**, multiplicado por 100. Los pasos evaluables que
+quedaron sin responder cuentan como incorrectos, de modo que responder solo uno y
+completar no otorga la nota máxima. Los pasos sin contrato de evaluación no entran
+ni en el numerador ni en el denominador. Las bandas son 1 estrella para 0–49, 2
+para 50–79 y 3 para 80–100. El cliente no envía el resultado final.
+
+Iniciar un intento sobre una actividad que ya tiene otro en curso devuelve el
+existente con `200` en lugar de crear uno nuevo con `201`; así el progreso no se
+reparte entre registros duplicados.
 
 Para comprobar el aislamiento, registre una segunda cuenta y repita una consulta con el `LEARNER_ID` anterior usando su token; esa cuenta no debe obtener los datos del estudiante.
+
+## Seguridad incluida
+
+- Contraseñas con argon2id (19 MiB, `t=2`, `p=1`), según la recomendación de OWASP.
+- Cabeceras de seguridad mediante `@fastify/helmet`.
+- Limitación de tasa por IP, con una cuota mucho más estricta en `/auth/register` y
+  `/auth/login`: cada llamada ejecuta argon2id y sin límite serían un vector de
+  fuerza bruta y de agotamiento de memoria.
+- CORS restringido a la lista de `CORS_ORIGINS`; `*` está prohibido en producción.
+- Los errores nunca reenvían el mensaje interno: se responde un sobre propio con
+  código, mensaje e identificador de petición.
+- El registro no revela si un correo ya existe y los recursos ajenos responden
+  `404`, no `403`, para no permitir enumeración.
+- Las URL de contenido se normalizan antes de salir: solo se emiten rutas propias
+  o `http`/`https`, nunca `javascript:` ni `data:`.
+- Los registros ocultan `authorization`, `cookie` y cualquier campo de contraseña.
 
 ## Limitaciones conocidas
 
 - Es un prototipo local, sin frontend, despliegue productivo, panel administrativo ni gestión del catálogo por API.
 - Usa un único JWT de acceso. No incluye recuperación de contraseña, verificación de correo, autenticación externa ni sesiones por dispositivo.
+- El token no se puede revocar antes de que expire: no hay cierre de sesión, lista
+  de revocación ni identificador de token. Desactivar la cuenta (`isActive`) sí
+  corta el acceso, porque se comprueba en cada petición.
+- La limitación de tasa se guarda en memoria del proceso: con más de una instancia
+  cada una lleva su propia cuenta. Para varias réplicas hace falta un almacén
+  compartido, por ejemplo Redis.
+- Los listados de actividades y estudiantes no están paginados.
 - Cada estudiante pertenece a la cuenta adulta que lo creó; no hay funciones para compartirlo con otras cuentas.
 - SQLite facilita la demostración local, pero no cubre concurrencia elevada, alta disponibilidad ni copias de seguridad administradas.
 - El catálogo contiene solo las cinco actividades del seed; no hay archivos multimedia generados.

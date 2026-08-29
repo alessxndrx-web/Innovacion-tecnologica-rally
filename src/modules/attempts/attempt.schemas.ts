@@ -17,7 +17,10 @@ export const submitResponseBodySchema = z
   .object({ response: z.record(z.unknown()) })
   .strict('No se permiten campos adicionales.');
 
-export const emptyBodySchema = z.object({}).strict().optional();
+// Fastify entrega `null` como cuerpo cuando la petición no trae ninguno, así
+// que `.optional()` por sí solo rechazaba `POST .../complete` sin cuerpo, que
+// es exactamente como lo documenta el README. `.nullish()` acepta ambos casos.
+export const emptyBodySchema = z.object({}).strict().nullish();
 
 export const attemptResponseItemSchema = z.object({
   id: uuidSchema,

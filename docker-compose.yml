@@ -12,7 +12,12 @@ services:
       ACCESS_TOKEN_TTL: 1h
       CORS_ORIGINS: http://localhost:5173
       LOG_LEVEL: info
-    command: ['sh', '-c', 'npm run db:migrate && npm run db:seed && npm run dev']
+      TRUST_PROXY: 'false'
+      RATE_LIMIT_MAX: '100'
+      RATE_LIMIT_WINDOW: 1m
+      AUTH_RATE_LIMIT_MAX: '10'
+      AUTH_RATE_LIMIT_WINDOW: 15m
+    command: ['sh', '-c', 'pnpm db:migrate && pnpm db:seed && pnpm dev']
     ports:
       - '127.0.0.1:3000:3000'
     volumes:

@@ -1,8 +1,13 @@
 import { randomUUID } from 'node:crypto';
 import cors from '@fastify/cors';
+import helmet from '@fastify/helmet';
+import rateLimit from '@fastify/rate-limit';
+import swagger from '@fastify/swagger';
+import swaggerUi from '@fastify/swagger-ui';
 import type { PrismaClient } from '@prisma/client';
 import Fastify, { type FastifyInstance } from 'fastify';
 import {
+  jsonSchemaTransform,
   serializerCompiler,
   validatorCompiler,
   type ZodTypeProvider,
@@ -43,35 +48,106 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
     logger,
     bodyLimit: 64 * 1024,
     genReqId: () => randomUUID(),
+    // Sin esto, detrás de un balanceador todas las peticiones comparten la IP
+    // del proxy y la limitación de tasa las trata como un único cliente.
+    trustProxy: config.trustProxy,
   }).withTypeProvider<ZodTypeProvider>();
 
   fastify.setValidatorCompiler(validatorCompiler);
   fastify.setSerializerCompiler(serializerCompiler);
+
+  // Muchos clientes HTTP envían `Content-Type: application/json` con el cuerpo
+  // vacío en un POST sin datos. El parser por defecto lo rechaza con
+  // FST_ERR_CTP_EMPTY_JSON_BODY; aquí se interpreta como ausencia de cuerpo,
+  // que es lo que esperan rutas como /complete y /abandon.
+  fastify.addContentTypeParser(
+    'application/json',
+    { parseAs: 'string' },
+    (_request, body: string, done) => {
+      if (body.trim() === '') {
+        done(null, null);
+        return;
+      }
+
+      try {
+        done(null, JSON.parse(body));
+      } catch {
+        const failure = Object.assign(new Error('El cuerpo no es JSON válido.'), {
+          statusCode: 400,
+        });
+        done(failure, undefined);
+      }
+    },
+  );
   fastify.decorate('config', config);
   registerErrorHandler(fastify);
 
+  // swagger-ui necesita estilos y scripts en línea; fuera de la documentación
+  // la política por defecto de helmet se mantiene intacta.
+  await fastify.register(helmet, config.enableDocs ? { contentSecurityPolicy: false } : {});
   await fastify.register(cors, { origin: config.corsOrigins });
+
+  await fastify.register(rateLimit, {
+    global: true,
+    max: config.rateLimit.max,
+    timeWindow: config.rateLimit.windowMs,
+    // Las sondas de salud del orquestador no deben consumir cuota.
+    allowList: (request) => request.url === '/health',
+    errorResponseBuilder: (request, context) => ({
+      statusCode: 429,
+      error: {
+        code: 'TOO_MANY_REQUESTS',
+        message: `Demasiadas solicitudes. Vuelve a intentarlo en ${context.after}.`,
+        details: [],
+        requestId: request.id,
+      },
+    }),
+  });
+
   await fastify.register(
     prismaPlugin,
     options.prisma === undefined ? {} : { client: options.prisma },
   );
   await fastify.register(authenticationPlugin);
 
-  fastify.get('/health', async (_request, reply) => {
-    try {
-      await fastify.prisma.$queryRaw`SELECT 1`;
-      return { data: { status: 'ok', database: 'ready' } };
-    } catch {
-      return reply.status(503).send({
-        error: {
-          code: 'NOT_READY',
-          message: 'La aplicación todavía no está lista.',
-          details: [],
-          requestId: reply.request.id,
+  if (config.enableDocs) {
+    await fastify.register(swagger, {
+      openapi: {
+        info: {
+          title: 'ADAPTA API',
+          description: 'Backend del MVP de ADAPTA.',
+          version: '0.1.0',
         },
-      });
-    }
-  });
+        components: {
+          securitySchemes: {
+            bearerAuth: { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' },
+          },
+        },
+      },
+      transform: jsonSchemaTransform,
+    });
+    await fastify.register(swaggerUi, { routePrefix: '/docs' });
+  }
+
+  fastify.get(
+    '/health',
+    { schema: { tags: ['Operación'], summary: 'Estado del servicio' } },
+    async (_request, reply) => {
+      try {
+        await fastify.prisma.$queryRaw`SELECT 1`;
+        return { data: { status: 'ok', database: 'ready' } };
+      } catch {
+        return reply.status(503).send({
+          error: {
+            code: 'NOT_READY',
+            message: 'La aplicación todavía no está lista.',
+            details: [],
+            requestId: reply.request.id,
+          },
+        });
+      }
+    },
+  );
 
   await fastify.register(authRoutes, { prefix: '/api/v1/auth' });
   await fastify.register(learnerRoutes, { prefix: '/api/v1/learners' });

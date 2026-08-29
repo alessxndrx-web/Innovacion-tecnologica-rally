@@ -2,6 +2,7 @@ import type { FastifyPluginAsync } from 'fastify';
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
 import { errorResponseSchema } from '../../shared/schemas';
 import { errors } from '../../shared/errors';
+import { safeMediaUrl } from '../../shared/urls';
 import {
   activityFilterSchema,
   activityListResponseSchema,
@@ -33,7 +34,7 @@ function summaryView(activity: {
     category: activity.category,
     difficulty: activity.difficulty,
     estimatedMinutes: activity.estimatedMinutes,
-    imageUrl: activity.imageUrl,
+    imageUrl: safeMediaUrl(activity.imageUrl),
   };
 }
 
@@ -42,8 +43,8 @@ function stepView(step: ActivityStepViewInput) {
     id: step.id,
     number: step.stepNumber,
     instruction: step.instruction,
-    imageUrl: step.imageUrl,
-    audioUrl: step.audioUrl,
+    imageUrl: safeMediaUrl(step.imageUrl),
+    audioUrl: safeMediaUrl(step.audioUrl),
   };
 }
 

@@ -1,5 +1,6 @@
 import type { User } from '@prisma/client';
 import argon2 from 'argon2';
+import { safeMediaUrl } from '../../shared/urls';
 
 const PASSWORD_HASH_OPTIONS = {
   type: argon2.argon2id,
@@ -30,7 +31,7 @@ export function toPublicUser(user: User) {
     email: user.email,
     fullName: user.fullName,
     role: user.role,
-    avatarUrl: user.avatarUrl,
+    avatarUrl: safeMediaUrl(user.avatarUrl),
     isActive: user.isActive,
     createdAt: user.createdAt.toISOString(),
     updatedAt: user.updatedAt.toISOString(),

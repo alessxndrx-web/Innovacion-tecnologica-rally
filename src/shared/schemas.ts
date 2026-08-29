@@ -16,18 +16,6 @@ export const errorResponseSchema = z.object({
   }),
 });
 
-export const paginationQuerySchema = z.object({
-  page: z.coerce.number().int().min(1).default(1),
-  pageSize: z.coerce.number().int().min(1).max(100).default(20),
-});
-
-export const paginationMetaSchema = z.object({
-  page: z.number().int(),
-  pageSize: z.number().int(),
-  total: z.number().int(),
-  totalPages: z.number().int(),
-});
-
 export function dataResponseSchema<T extends z.ZodTypeAny>(data: T) {
   return z.object({ data, meta: z.record(z.unknown()).optional() });
 }

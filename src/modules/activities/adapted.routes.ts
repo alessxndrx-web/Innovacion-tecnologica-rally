@@ -3,6 +3,7 @@ import type { ZodTypeProvider } from 'fastify-type-provider-zod';
 import { assertLearnerAccess } from '../../shared/authorization';
 import { errors } from '../../shared/errors';
 import { errorResponseSchema } from '../../shared/schemas';
+import { safeMediaUrl } from '../../shared/urls';
 import { adaptActivity } from './adaptation.service';
 import { adaptedActivityParamsSchema, adaptedActivityResponseSchema } from './activity.schemas';
 
@@ -44,19 +45,28 @@ export const adaptedActivityRoutes: FastifyPluginAsync = async (fastify) => {
         throw errors.forbiddenLearner();
       }
 
+      const adapted = adaptActivity(
+        {
+          id: activity.id,
+          title: activity.title,
+          description: activity.description,
+          category: activity.category,
+          difficulty: activity.difficulty,
+          estimatedMinutes: activity.estimatedMinutes,
+          steps: activity.steps,
+        },
+        profile,
+      );
+
       return {
-        data: adaptActivity(
-          {
-            id: activity.id,
-            title: activity.title,
-            description: activity.description,
-            category: activity.category,
-            difficulty: activity.difficulty,
-            estimatedMinutes: activity.estimatedMinutes,
-            steps: activity.steps,
-          },
-          profile,
-        ),
+        data: {
+          ...adapted,
+          steps: adapted.steps.map((step) => ({
+            ...step,
+            imageUrl: safeMediaUrl(step.imageUrl),
+            audioUrl: safeMediaUrl(step.audioUrl),
+          })),
+        },
       };
     },
   );

@@ -32,13 +32,15 @@ export interface ScorableResponse {
 
 export interface AttemptScore {
   readonly correctAnswers: number;
-  /** Number of responses that could be evaluated automatically. */
+  /** Pasos evaluables considerados, incluidos los que quedaron sin responder. */
   readonly totalAnswers: number;
   readonly score: number;
   readonly stars: 0 | 1 | 2 | 3;
 }
 
 const FORBIDDEN_OBJECT_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
+/** Locale fijo: el resultado no puede depender de la configuración del host. */
+const COMPARISON_LOCALE = 'es';
 const MAX_COMPARISON_DEPTH = 32;
 const MAX_COMPARISON_NODES = 10_000;
 
@@ -100,7 +102,7 @@ function jsonEquals(expected: JsonValue, actual: JsonValue, caseSensitive: boole
   if (typeof expected === 'string' && typeof actual === 'string') {
     return caseSensitive
       ? expected === actual
-      : expected.localeCompare(actual, undefined, { sensitivity: 'accent' }) === 0;
+      : expected.localeCompare(actual, COMPARISON_LOCALE, { sensitivity: 'accent' }) === 0;
   }
 
   if (
@@ -239,14 +241,52 @@ export function starsForScore(score: number): 1 | 2 | 3 {
 }
 
 /**
- * Calculates server-owned attempt totals. Non-evaluable responses are excluded
- * from both the numerator and denominator.
+ * Indica si un contrato `expectedResponse` es evaluable automáticamente, sin
+ * necesidad de una respuesta. Permite derivar el denominador del puntaje de los
+ * pasos de la actividad y no solo de lo que el cliente decidió responder.
  */
-export function calculateScore(responses: readonly ScorableResponse[]): AttemptScore {
+export function isEvaluableExpectedResponse(expectedResponse: unknown): boolean {
+  const budget = { remainingNodes: MAX_COMPARISON_NODES };
+  if (!isSafeJsonValue(expectedResponse, budget) || !isRecord(expectedResponse)) {
+    return false;
+  }
+
+  if (expectedResponse.type === 'exact') {
+    return Object.hasOwn(expectedResponse, 'value');
+  }
+
+  if (expectedResponse.type === 'oneOf') {
+    return Array.isArray(expectedResponse.values) && expectedResponse.values.length > 0;
+  }
+
+  if (expectedResponse.type === 'unorderedArray') {
+    return Array.isArray(expectedResponse.values);
+  }
+
+  return false;
+}
+
+/**
+ * Calcula los totales del intento, que son responsabilidad del servidor.
+ *
+ * Las respuestas no evaluables se excluyen del numerador y del denominador.
+ * Cuando se indica `evaluableStepCount`, los pasos evaluables que quedaron sin
+ * responder cuentan como incorrectos: de lo contrario bastaría con responder un
+ * único paso y completar el intento para obtener 100 puntos y tres estrellas.
+ */
+export function calculateScore(
+  responses: readonly ScorableResponse[],
+  evaluableStepCount?: number,
+): AttemptScore {
   const evaluableResponses = responses.filter(
     (response) => typeof response.isCorrect === 'boolean',
   );
-  const totalAnswers = evaluableResponses.length;
+  const answeredCount = evaluableResponses.length;
+  const expectedCount =
+    evaluableStepCount === undefined || !Number.isFinite(evaluableStepCount)
+      ? answeredCount
+      : Math.max(0, Math.trunc(evaluableStepCount));
+  const totalAnswers = Math.max(answeredCount, expectedCount);
 
   if (totalAnswers === 0) {
     return {

@@ -4,7 +4,11 @@ import type { ZodTypeProvider } from 'fastify-type-provider-zod';
 import { assertLearnerAccess } from '../../shared/authorization';
 import { errors } from '../../shared/errors';
 import { errorResponseSchema } from '../../shared/schemas';
-import { calculateAttemptScore, evaluateExpectedResponse } from './scoring.service';
+import {
+  calculateAttemptScore,
+  evaluateExpectedResponse,
+  isEvaluableExpectedResponse,
+} from './scoring.service';
 import {
   attemptParamsSchema,
   attemptResponseSchema,
@@ -53,6 +57,23 @@ function attemptView(attempt: AttemptWithDetails) {
   };
 }
 
+/**
+ * Cuenta los pasos de la actividad cuyo contrato puede evaluarse de forma
+ * automática. Es el denominador correcto del puntaje: sin él, el cliente
+ * elegiría su propia nota respondiendo solo los pasos que le convienen.
+ */
+async function countEvaluableSteps(
+  transaction: Prisma.TransactionClient,
+  activityId: string,
+): Promise<number> {
+  const steps = await transaction.activityStep.findMany({
+    where: { activityId },
+    select: { expectedResponse: true },
+  });
+
+  return steps.filter((step) => isEvaluableExpectedResponse(step.expectedResponse)).length;
+}
+
 export const attemptRoutes: FastifyPluginAsync = async (fastify) => {
   const app = fastify.withTypeProvider<ZodTypeProvider>();
   app.addHook('preHandler', fastify.authenticate);
@@ -62,9 +83,12 @@ export const attemptRoutes: FastifyPluginAsync = async (fastify) => {
     {
       schema: {
         tags: ['Intentos'],
+        summary: 'Iniciar o retomar un intento',
+        security: [{ bearerAuth: [] }],
         params: attemptParamsSchema.pick({ learnerId: true }),
         body: createAttemptBodySchema,
         response: {
+          200: attemptResponseSchema,
           201: attemptResponseSchema,
           400: errorResponseSchema,
           404: errorResponseSchema,
@@ -79,6 +103,22 @@ export const attemptRoutes: FastifyPluginAsync = async (fastify) => {
       });
       if (!activity) {
         throw errors.activityNotFound();
+      }
+
+      // Retomar el intento abierto en lugar de abrir otro: varios intentos
+      // IN_PROGRESS a la vez falsean el progreso y reparten las respuestas
+      // del mismo ejercicio entre registros distintos.
+      const existing = await fastify.prisma.activityAttempt.findFirst({
+        where: {
+          learnerId: request.params.learnerId,
+          activityId: activity.id,
+          status: 'IN_PROGRESS',
+        },
+        include: attemptInclude,
+        orderBy: { startedAt: 'desc' },
+      });
+      if (existing) {
+        return reply.status(200).send({ data: attemptView(existing) });
       }
 
       const attempt = await fastify.prisma.activityAttempt.create({
@@ -104,6 +144,8 @@ export const attemptRoutes: FastifyPluginAsync = async (fastify) => {
     {
       schema: {
         tags: ['Intentos'],
+        summary: 'Registrar la respuesta de un paso',
+        security: [{ bearerAuth: [] }],
         params: responseParamsSchema,
         body: submitResponseBodySchema,
         response: {
@@ -171,6 +213,8 @@ export const attemptRoutes: FastifyPluginAsync = async (fastify) => {
     {
       schema: {
         tags: ['Intentos'],
+        summary: 'Completar un intento y calcular el puntaje',
+        security: [{ bearerAuth: [] }],
         params: attemptParamsSchema,
         body: emptyBodySchema,
         response: {
@@ -199,7 +243,8 @@ export const attemptRoutes: FastifyPluginAsync = async (fastify) => {
           throw errors.attemptNotEditable();
         }
 
-        const calculated = calculateAttemptScore(attempt.responses);
+        const evaluableStepCount = await countEvaluableSteps(transaction, attempt.activityId);
+        const calculated = calculateAttemptScore(attempt.responses, evaluableStepCount);
         return transaction.activityAttempt.update({
           where: { id: attempt.id },
           data: {
@@ -218,11 +263,59 @@ export const attemptRoutes: FastifyPluginAsync = async (fastify) => {
     },
   );
 
+  app.post(
+    '/:learnerId/attempts/:attemptId/abandon',
+    {
+      schema: {
+        tags: ['Intentos'],
+        summary: 'Abandonar un intento en curso',
+        security: [{ bearerAuth: [] }],
+        params: attemptParamsSchema,
+        body: emptyBodySchema,
+        response: {
+          200: attemptResponseSchema,
+          400: errorResponseSchema,
+          404: errorResponseSchema,
+          409: errorResponseSchema,
+        },
+      },
+    },
+    async (request) => {
+      await assertLearnerAccess(fastify.prisma, request.params.learnerId, request.user.sub);
+
+      const abandoned = await fastify.prisma.$transaction(async (transaction) => {
+        const attempt = await transaction.activityAttempt.findFirst({
+          where: { id: request.params.attemptId, learnerId: request.params.learnerId },
+          include: attemptInclude,
+        });
+        if (!attempt) {
+          throw errors.attemptNotFound();
+        }
+        if (attempt.status === 'ABANDONED') {
+          return attempt;
+        }
+        if (attempt.status !== 'IN_PROGRESS') {
+          throw errors.attemptNotEditable();
+        }
+
+        return transaction.activityAttempt.update({
+          where: { id: attempt.id },
+          data: { status: 'ABANDONED' },
+          include: attemptInclude,
+        });
+      });
+
+      return { data: attemptView(abandoned) };
+    },
+  );
+
   app.get(
     '/:learnerId/progress',
     {
       schema: {
         tags: ['Progreso'],
+        summary: 'Resumen de progreso del estudiante',
+        security: [{ bearerAuth: [] }],
         params: attemptParamsSchema.pick({ learnerId: true }),
         response: {
           200: progressResponseSchema,

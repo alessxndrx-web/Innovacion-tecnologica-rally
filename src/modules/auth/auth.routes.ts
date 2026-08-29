@@ -13,9 +13,21 @@ function registrationConflict(): AppError {
 export const authRoutes: FastifyPluginAsync = async (fastify) => {
   const app = fastify.withTypeProvider<ZodTypeProvider>();
 
+  // Estas dos rutas son las únicas sin autenticar que ejecutan argon2id con
+  // 19 MiB de memoria por llamada: además de la fuerza bruta, un pico de
+  // peticiones concurrentes agotaría la memoria del proceso. Por eso llevan un
+  // límite mucho más estricto que el global.
+  const authRateLimit = {
+    rateLimit: {
+      max: fastify.config.authRateLimit.max,
+      timeWindow: fastify.config.authRateLimit.windowMs,
+    },
+  };
+
   app.post(
     '/register',
     {
+      config: authRateLimit,
       schema: {
         tags: ['Autenticación'],
         summary: 'Registrar una cuenta adulta',
@@ -24,6 +36,7 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
           201: authenticationResponseSchema,
           400: errorResponseSchema,
           409: errorResponseSchema,
+          429: errorResponseSchema,
         },
       },
     },
@@ -70,6 +83,7 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
   app.post(
     '/login',
     {
+      config: authRateLimit,
       schema: {
         tags: ['Autenticación'],
         summary: 'Iniciar sesión',
@@ -78,6 +92,7 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
           200: authenticationResponseSchema,
           400: errorResponseSchema,
           401: errorResponseSchema,
+          429: errorResponseSchema,
         },
       },
     },

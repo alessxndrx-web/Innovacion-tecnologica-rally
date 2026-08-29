@@ -1,0 +1,8 @@
+# Finales de línea deterministas: el equipo trabaja en Windows y CI en Linux.
+# Sin esto, Prettier y Git discrepan y cada formateo ensucia el diff entero.
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.mp3 binary
+*.db binary

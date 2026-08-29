@@ -1,0 +1,10 @@
+# pnpm 11 dejo de leer el campo "pnpm" de package.json; los ajustes viven aqui.
+# Sin esta lista pnpm omite los scripts de instalacion de estas dependencias,
+# que necesitan binarios nativos (argon2), motores (Prisma) o binario de
+# plataforma (esbuild, usado por tsx y vitest).
+allowBuilds:
+  '@prisma/client': true
+  '@prisma/engines': true
+  argon2: true
+  esbuild: true
+  prisma: true
