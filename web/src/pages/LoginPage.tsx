@@ -4,6 +4,7 @@ import { messageForError } from '../api/error-messages';
 import googleIcon from '../assets/google-icon.svg';
 import kivoLogo from '../assets/kivo-logo.png';
 import { useAuth } from '../auth/useAuth';
+import { DemoNotice } from '../components/DemoNotice';
 import { hasCompletedProfileQuestions } from '../profile-question-storage';
 import { activityRoutes } from '../routes/activity-flow';
 
@@ -35,9 +36,7 @@ export function LoginPage(): React.JSX.Element {
   if (status === 'authenticated') {
     return (
       <Navigate
-        to={
-          hasCompletedProfileQuestions() ? activityRoutes.home : activityRoutes.profileQuestions
-        }
+        to={hasCompletedProfileQuestions() ? activityRoutes.home : activityRoutes.profileQuestions}
         replace
       />
     );
@@ -161,6 +160,8 @@ export function LoginPage(): React.JSX.Element {
           </button>
         </form>
       </section>
+
+      <DemoNotice />
     </main>
   );
 }

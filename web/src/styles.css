@@ -6281,3 +6281,25 @@ body {
     scroll-behavior: auto !important;
   }
 }
+
+/* ---------------------------------------------------------------------------
+   Aviso de modo demostración (sin backend). Fijo abajo para no interferir con
+   las pantallas de acceso, maquetadas con posiciones absolutas.
+   --------------------------------------------------------------------------- */
+
+.demo-notice {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  margin: 0;
+  padding: 0.5rem 1rem;
+  text-align: center;
+  font-size: 0.75rem;
+  line-height: 1.3;
+  color: #4a3f6b;
+  background: rgba(255, 233, 176, 0.96);
+  border-top: 1px solid rgba(74, 63, 107, 0.18);
+  pointer-events: none;
+}

@@ -4,6 +4,7 @@ import { messageForError } from '../api/error-messages';
 import kivoLogo from '../assets/kivo-logo.png';
 import type { UserRole } from '../auth/session-storage';
 import { useAuth } from '../auth/useAuth';
+import { DemoNotice } from '../components/DemoNotice';
 import { hasCompletedProfileQuestions } from '../profile-question-storage';
 import { activityRoutes } from '../routes/activity-flow';
 
@@ -52,9 +53,7 @@ export function RegisterPage(): React.JSX.Element {
   if (status === 'authenticated') {
     return (
       <Navigate
-        to={
-          hasCompletedProfileQuestions() ? activityRoutes.home : activityRoutes.profileQuestions
-        }
+        to={hasCompletedProfileQuestions() ? activityRoutes.home : activityRoutes.profileQuestions}
         replace
       />
     );
@@ -209,6 +208,8 @@ export function RegisterPage(): React.JSX.Element {
           </Link>
         </p>
       </section>
+
+      <DemoNotice />
     </main>
   );
 }

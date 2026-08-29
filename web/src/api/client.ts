@@ -1,3 +1,4 @@
+import { demoCurrentUser, demoLogin, demoRegister } from '../auth/demo-auth';
 import {
   clearSession,
   loadSession,
@@ -6,33 +7,11 @@ import {
   type Session,
   type UserRole,
 } from '../auth/session-storage';
-import { API_BASE_URL } from './config';
+import { API_BASE_URL, DEMO_MODE } from './config';
+import { ApiError, NetworkError, type ApiErrorDetail } from './errors';
 
-export interface ApiErrorDetail {
-  field?: string;
-  message: string;
-}
-
-/** Error con el `code` estable que devuelve el backend en `error.code`. */
-export class ApiError extends Error {
-  public constructor(
-    public readonly status: number,
-    public readonly code: string,
-    message: string,
-    public readonly details: ApiErrorDetail[] = [],
-  ) {
-    super(message);
-    this.name = 'ApiError';
-  }
-}
-
-/** El servidor no respondió: sin conexión, caído o CORS mal configurado. */
-export class NetworkError extends Error {
-  public constructor(cause: unknown) {
-    super('No se pudo conectar con el servidor.', { cause });
-    this.name = 'NetworkError';
-  }
-}
+export { ApiError, NetworkError } from './errors';
+export type { ApiErrorDetail } from './errors';
 
 interface RequestOptions {
   method?: string;
@@ -119,6 +98,11 @@ let refreshInFlight: Promise<Session | null> | null = null;
  * llamadas concurrentes esperan al resultado de la primera.
  */
 async function refreshSession(): Promise<Session | null> {
+  // En modo demo los tokens no caducan y no hay a quién pedir la renovación.
+  if (DEMO_MODE) {
+    return loadSession();
+  }
+
   if (refreshInFlight !== null) {
     return refreshInFlight;
   }
@@ -179,6 +163,12 @@ interface DataEnvelope<T> {
 }
 
 export async function login(email: string, password: string): Promise<Session> {
+  if (DEMO_MODE) {
+    const session = await demoLogin(email, password);
+    saveSession(session);
+    return session;
+  }
+
   const body = await apiRequest<DataEnvelope<Session>>('/api/v1/auth/login', {
     method: 'POST',
     body: { email, password },
@@ -203,6 +193,12 @@ export interface RegisterInput {
  * quien se registra entra directamente sin un segundo viaje al servidor.
  */
 export async function register(input: RegisterInput): Promise<Session> {
+  if (DEMO_MODE) {
+    const session = await demoRegister(input);
+    saveSession(session);
+    return session;
+  }
+
   const body = await apiRequest<DataEnvelope<Session>>('/api/v1/auth/register', {
     method: 'POST',
     body: input,
@@ -222,7 +218,7 @@ export async function logout(): Promise<void> {
   const current = loadSession();
   clearSession();
 
-  if (current === null) {
+  if (current === null || DEMO_MODE) {
     return;
   }
 
@@ -238,6 +234,14 @@ export async function logout(): Promise<void> {
 }
 
 export async function fetchCurrentUser(): Promise<PublicUser> {
+  if (DEMO_MODE) {
+    const session = loadSession();
+    if (session === null) {
+      throw new ApiError(401, 'UNAUTHORIZED', 'La sesión no es válida.');
+    }
+    return demoCurrentUser(session.user.id);
+  }
+
   const body = await apiRequest<DataEnvelope<PublicUser>>('/api/v1/auth/me');
   return body.data;
 }

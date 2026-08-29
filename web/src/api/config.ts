@@ -15,3 +15,29 @@ export const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? DEFAULT_API_BA
   /\/+$/,
   '',
 );
+
+/**
+ * Autenticación local, sin backend.
+ *
+ * Se activa cuando la base de la API queda vacía, que es justo lo que ocurre
+ * al desplegar solo la interfaz: `VITE_API_BASE_URL=""` deja las peticiones
+ * colgando de un origen que no tiene API, y registrarse devolvía 404. Con esto
+ * la aplicación se puede recorrer entera mientras el backend no esté publicado.
+ *
+ * Es una condición, no un interruptor que haya que acordarse de apagar: en
+ * cuanto la variable apunte a un servidor real, el modo demo desaparece y se
+ * usa el registro de verdad. `VITE_DEMO_MODE` permite forzar cualquiera de los
+ * dos comportamientos si hiciera falta.
+ */
+function resolveDemoMode(): boolean {
+  const override = import.meta.env.VITE_DEMO_MODE;
+  if (override === 'true') {
+    return true;
+  }
+  if (override === 'false') {
+    return false;
+  }
+  return API_BASE_URL === '';
+}
+
+export const DEMO_MODE = resolveDemoMode();
