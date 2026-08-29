@@ -4,7 +4,15 @@ import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
   {
-    ignores: ['dist/**', 'node_modules/**', 'coverage/**', 'tmp/**', 'eslint.config.mjs'],
+    // Con `**/` para alcanzar también los artefactos de `web/`, no solo los de
+    // la raíz: sin esto ESLint intenta analizar el bundle de Vite.
+    ignores: [
+      '**/dist/**',
+      '**/node_modules/**',
+      '**/coverage/**',
+      '**/tmp/**',
+      'eslint.config.mjs',
+    ],
   },
   eslint.configs.recommended,
   ...tseslint.configs.recommendedTypeChecked,

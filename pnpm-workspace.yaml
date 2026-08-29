@@ -1,3 +1,7 @@
+# El backend vive en la raíz; la interfaz web en `web/`. Un solo lockfile.
+packages:
+  - 'web'
+
 # pnpm 11 dejo de leer el campo "pnpm" de package.json; los ajustes viven aqui.
 # Sin esta lista pnpm omite los scripts de instalacion de estas dependencias,
 # que necesitan binarios nativos (argon2), motores (Prisma) o binario de
