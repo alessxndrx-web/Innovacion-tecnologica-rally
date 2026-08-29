@@ -32,7 +32,7 @@ export function LoginPage(): React.JSX.Element {
   const [submitting, setSubmitting] = useState(false);
 
   if (status === 'authenticated') {
-    return <Navigate to={activityRoutes.home} replace />;
+    return <Navigate to={activityRoutes.profileQuestions} replace />;
   }
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
@@ -48,7 +48,7 @@ export function LoginPage(): React.JSX.Element {
     setSubmitting(true);
     try {
       await signIn(trimmedEmail, password);
-      void navigate(activityRoutes.home, { replace: true });
+      void navigate(activityRoutes.profileQuestions, { replace: true });
     } catch (caught) {
       setFeedback({ kind: 'error', text: messageForError(caught) });
     } finally {

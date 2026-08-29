@@ -49,7 +49,7 @@ export function RegisterPage(): React.JSX.Element {
   const [submitting, setSubmitting] = useState(false);
 
   if (status === 'authenticated') {
-    return <Navigate to={activityRoutes.home} replace />;
+    return <Navigate to={activityRoutes.profileQuestions} replace />;
   }
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
@@ -67,7 +67,7 @@ export function RegisterPage(): React.JSX.Element {
     setSubmitting(true);
     try {
       await signUp({ fullName: trimmedName, email: trimmedEmail, password, role });
-      void navigate(activityRoutes.questionNotice, { replace: true });
+      void navigate(activityRoutes.profileQuestions, { replace: true });
     } catch (caught) {
       setError(
         messageForError(caught, {

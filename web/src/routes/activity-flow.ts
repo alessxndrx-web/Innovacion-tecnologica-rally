@@ -11,6 +11,7 @@ export const activityRoutes = {
   login: '/login',
   register: '/register',
   questionNotice: '/preguntas/aviso',
+  profileQuestions: '/perfil/preguntas',
   home: '/actividades',
   instruction: '/actividades/instruccion-unica',
   sequence: '/actividades/secuencia-visual',
@@ -119,6 +120,7 @@ export function flowStepFor(path: string): ActivityStep {
  */
 const SCREEN_TITLES: Readonly<Record<string, string>> = {
   [activityRoutes.home]: 'Elige una actividad',
+  [activityRoutes.profileQuestions]: 'Preguntas de perfil',
   [activityRoutes.instruction]: 'Instrucción única',
   [activityRoutes.sequence]: 'Secuencia visual',
   [activityRoutes.classification]: 'Clasificación',

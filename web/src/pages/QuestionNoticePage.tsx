@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import dot1 from '../assets/question-notice/dot-1.svg';
 import dot2 from '../assets/question-notice/dot-2.svg';
@@ -13,9 +14,32 @@ import shield from '../assets/question-notice/shield.svg';
 import { activityRoutes } from '../routes/activity-flow';
 
 const dots = [dot1, dot2, dot3, dot4, dot5, dot6, dot7, dot8];
+const LOADING_DURATION_MS = 10_000;
 
 export function QuestionNoticePage(): React.JSX.Element {
   const navigate = useNavigate();
+  const [remainingMs, setRemainingMs] = useState(LOADING_DURATION_MS);
+
+  useEffect(() => {
+    const startedAt = Date.now();
+    const updateCountdown = (): void => {
+      setRemainingMs(Math.max(0, LOADING_DURATION_MS - (Date.now() - startedAt)));
+    };
+
+    const intervalId = window.setInterval(updateCountdown, 200);
+    const timeoutId = window.setTimeout(() => {
+      void navigate(activityRoutes.login, { replace: true });
+    }, LOADING_DURATION_MS);
+
+    return () => {
+      window.clearInterval(intervalId);
+      window.clearTimeout(timeoutId);
+    };
+  }, [navigate]);
+
+  const remainingSeconds = Math.max(1, Math.ceil(remainingMs / 1000));
+  const progress = ((LOADING_DURATION_MS - remainingMs) / LOADING_DURATION_MS) * 100;
+
   return (
     <main className="question-notice-page">
       <section className="question-notice-copy">
@@ -35,9 +59,15 @@ export function QuestionNoticePage(): React.JSX.Element {
           <br />
           más necesita.
         </p>
-        <button type="button" onClick={() => void navigate(activityRoutes.home)}>
-          Continuar
-        </button>
+        <div className="question-notice-loader" role="status" aria-live="polite">
+          <div className="question-loader-copy">
+            <span>Preparando tu experiencia</span>
+            <strong>{remainingSeconds} s</strong>
+          </div>
+          <div className="question-loader-track" aria-hidden="true">
+            <span style={{ width: `${String(progress)}%` }} />
+          </div>
+        </div>
       </section>
       <img className="question-notice-mascot" src={mascot} alt="Kivo pensando" />
       <div className="question-notice-dots" aria-hidden="true">

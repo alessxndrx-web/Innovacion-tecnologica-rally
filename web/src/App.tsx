@@ -8,6 +8,7 @@ import { InstructionPage } from './pages/InstructionPage';
 import { LoginPage } from './pages/LoginPage';
 import { MatchingPage } from './pages/MatchingPage';
 import { MiniChallengePage } from './pages/MiniChallengePage';
+import { ProfileQuestionsPage } from './pages/ProfileQuestionsPage';
 import { QuestionNoticePage } from './pages/QuestionNoticePage';
 import { QuickMissionsPage } from './pages/QuickMissionsPage';
 import { RegisterPage } from './pages/RegisterPage';
@@ -25,7 +26,7 @@ import { activityRoutes } from './routes/activity-flow';
  * editando el código.
  */
 const protectedScreens: ReadonlyArray<{ path: string; element: React.JSX.Element }> = [
-  { path: activityRoutes.questionNotice, element: <QuestionNoticePage /> },
+  { path: activityRoutes.profileQuestions, element: <ProfileQuestionsPage /> },
   { path: activityRoutes.home, element: <HomePage /> },
   { path: activityRoutes.instruction, element: <InstructionPage /> },
   { path: activityRoutes.sequence, element: <SequenceVisualPage /> },
@@ -43,7 +44,7 @@ const protectedScreens: ReadonlyArray<{ path: string; element: React.JSX.Element
 /** Direcciones antiguas que ya se compartieron: redirigen en vez de dar 404. */
 const routeAliases: ReadonlyArray<{ from: string; to: string }> = [
   { from: '/actividades/tea', to: activityRoutes.home },
-  { from: '/', to: activityRoutes.home },
+  { from: '/', to: activityRoutes.questionNotice },
 ];
 
 export function App(): React.JSX.Element {
@@ -53,6 +54,7 @@ export function App(): React.JSX.Element {
         <Routes>
           <Route path={activityRoutes.login} element={<LoginPage />} />
           <Route path={activityRoutes.register} element={<RegisterPage />} />
+          <Route path={activityRoutes.questionNotice} element={<QuestionNoticePage />} />
 
           {protectedScreens.map((screen) => (
             <Route
@@ -70,7 +72,7 @@ export function App(): React.JSX.Element {
             />
           ))}
 
-          <Route path="*" element={<Navigate to={activityRoutes.home} replace />} />
+          <Route path="*" element={<Navigate to={activityRoutes.questionNotice} replace />} />
         </Routes>
       </AuthProvider>
     </BrowserRouter>
