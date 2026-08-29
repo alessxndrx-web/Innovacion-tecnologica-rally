@@ -9,6 +9,7 @@ import { LoginPage } from './pages/LoginPage';
 import { MatchingPage } from './pages/MatchingPage';
 import { MiniChallengePage } from './pages/MiniChallengePage';
 import { ProfileQuestionsPage } from './pages/ProfileQuestionsPage';
+import { ProfileThanksPage } from './pages/ProfileThanksPage';
 import { QuestionNoticePage } from './pages/QuestionNoticePage';
 import { QuickMissionsPage } from './pages/QuickMissionsPage';
 import { RegisterPage } from './pages/RegisterPage';
@@ -46,6 +47,8 @@ const profileQuestionScreens = [
   { path: activityRoutes.profileQuestion3, step: 3 },
   { path: activityRoutes.profileQuestion4, step: 4 },
   { path: activityRoutes.profileQuestion5, step: 5 },
+  { path: activityRoutes.profileQuestion6, step: 6 },
+  { path: activityRoutes.profileQuestion7, step: 7 },
 ] as const;
 
 /** Direcciones antiguas que ya se compartieron: redirigen en vez de dar 404. */
@@ -62,12 +65,24 @@ export function App(): React.JSX.Element {
           <Route path={activityRoutes.login} element={<LoginPage />} />
           <Route path={activityRoutes.register} element={<RegisterPage />} />
           <Route path={activityRoutes.questionNotice} element={<QuestionNoticePage />} />
+          <Route path={activityRoutes.profileThanks} element={<ProfileThanksPage />} />
 
           {profileQuestionScreens.map((screen) => (
             <Route
               key={screen.path}
               path={screen.path}
-              element={<ProfileQuestionsPage step={screen.step} />}
+              element={
+                /*
+                 * La `key` es lo que hace avanzar el cuestionario. Todas las
+                 * preguntas son el mismo componente en la misma posicion del
+                 * arbol, asi que React reutilizaba la instancia al cambiar de
+                 * ruta y conservaba su estado: `advancing` seguia en `true`
+                 * desde la pregunta anterior y llegaba con las respuestas
+                 * deshabilitadas. Con la `key` cada pregunta es una instancia
+                 * nueva y empieza limpia.
+                 */
+                <ProfileQuestionsPage key={screen.path} step={screen.step} />
+              }
             />
           ))}
 

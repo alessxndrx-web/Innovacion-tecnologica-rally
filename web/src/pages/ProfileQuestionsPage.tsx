@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import answerCircle1 from '../assets/profile-questions/answer-circle-1.svg';
 import answerCircle2 from '../assets/profile-questions/answer-circle-2.svg';
@@ -17,7 +17,6 @@ import question2Variable from '../assets/profile-questions/question-2-variable.s
 import question4Animation from '../assets/profile-questions/question-4-animation.svg';
 import question4Calm from '../assets/profile-questions/question-4-calm.svg';
 import question5Sequential from '../assets/profile-questions/question-5-sequential.svg';
-import { useAuth } from '../auth/useAuth';
 import {
   loadProfileAnswer,
   markProfileQuestionsCompleted,
@@ -25,7 +24,7 @@ import {
 } from '../profile-question-storage';
 import { activityRoutes } from '../routes/activity-flow';
 
-type QuestionStep = 1 | 2 | 3 | 4 | 5;
+type QuestionStep = 1 | 2 | 3 | 4 | 5 | 6 | 7;
 
 interface QuestionAnswer {
   readonly id: string;
@@ -114,8 +113,7 @@ const questions: Readonly<Record<QuestionStep, ProfileQuestion>> = {
     step: 3,
     nodeId: '142:47',
     theme: 'purple',
-    text:
-      'Cuando le pides que haga algo (e. “guarda los juguetes y lávate las manos”). ¿Cómo le resulta más fácil entenderlo?',
+    text: 'Cuando le pides que haga algo (e. “guarda los juguetes y lávate las manos”). ¿Cómo le resulta más fácil entenderlo?',
     subtitle: '(Para ajustar la cantidad de instrucciones y no saturar su memoria).',
     answers: [
       {
@@ -126,7 +124,7 @@ const questions: Readonly<Record<QuestionStep, ProfileQuestion>> = {
       },
       {
         id: 'MULTIPLE_STEPS',
-        label: 'Tiempo moderado (más de 5 minutos).',
+        label: 'Puede seguir dos o tres pasos seguidos.',
         tone: '#8bc347',
         symbol: '2 3',
         symbolClassName: 'is-small',
@@ -168,42 +166,114 @@ const questions: Readonly<Record<QuestionStep, ProfileQuestion>> = {
     subtitle: '(Para configurar el temporizador visual).',
     answers: [
       {
-        id: 'STEP_BY_STEP',
-        label: 'Un solo paso a la vez (si le digo 3 cosas juntas, olvida las últimas).',
+        id: 'NO_TIMER',
+        label: 'Sí, le pone nervioso/a: mejor sin contador a la vista.',
         tone: '#ec6683',
         icon: question5Sequential,
       },
       {
-        id: 'MODERATE',
-        label: 'Tiempo moderado (más de 5 minutos).',
+        id: 'NEUTRAL',
+        label: 'Le da igual, no le afecta.',
         tone: '#8bc347',
         symbol: '−',
       },
       {
         id: 'TIMER',
-        label: 'Tiempo moderado (más de 5 minutos).',
+        label: 'No, le ayuda ver cuánto tiempo queda.',
         tone: '#7257a8',
         symbol: '⌛',
         symbolClassName: 'is-dark',
       },
     ],
   },
+  6: {
+    step: 6,
+    nodeId: '142:182',
+    theme: 'teal',
+    text: '¿Cómo prefiere celebrar cuando termina una actividad?',
+    subtitle: '(Para elegir el tipo de recompensa que verá.)',
+    answers: [
+      {
+        id: 'STARS',
+        label: 'Con estrellas y confeti: le motiva ver el premio.',
+        tone: '#ff941c',
+        symbol: '★',
+      },
+      {
+        id: 'MESSAGE',
+        label: 'Con un mensaje corto de ánimo, sin ruido.',
+        tone: '#20b2b3',
+        symbol: '✓',
+      },
+      {
+        id: 'NONE',
+        label: 'Prefiere seguir sin pausas ni celebraciones.',
+        tone: '#7257a8',
+        symbol: '−',
+      },
+    ],
+  },
+  7: {
+    step: 7,
+    nodeId: '142:227',
+    theme: 'green',
+    text: '¿Con qué tipo de actividad le resulta más fácil empezar?',
+    subtitle: '(Para decidir qué le proponemos primero en el menú.)',
+    answers: [
+      {
+        id: 'SHAPES',
+        label: 'Con colores y formas.',
+        tone: '#8bc347',
+        symbol: '◆',
+      },
+      {
+        id: 'WORDS',
+        label: 'Con letras y palabras.',
+        tone: '#ec6683',
+        symbol: 'Aa',
+        symbolClassName: 'is-small',
+      },
+      {
+        id: 'ROUTINE',
+        label: 'Con rutinas y pasos del día.',
+        tone: '#7257a8',
+        symbol: '☰',
+      },
+    ],
+  },
 };
 
-const nextRoute: Readonly<Record<QuestionStep, string | null>> = {
+/** El orden del cuestionario y, con el, el total que muestra la cabecera. */
+const questionSteps: readonly QuestionStep[] = [1, 2, 3, 4, 5, 6, 7];
+
+const nextRoute: Readonly<Record<QuestionStep, string>> = {
   1: activityRoutes.profileQuestion2,
   2: activityRoutes.profileQuestion3,
   3: activityRoutes.profileQuestion4,
   4: activityRoutes.profileQuestion5,
-  5: null,
+  5: activityRoutes.profileQuestion6,
+  6: activityRoutes.profileQuestion7,
+  7: activityRoutes.profileThanks,
 };
+
+/** Contestar la ultima pregunta es lo que da el cuestionario por terminado. */
+const lastStep: QuestionStep = 7;
 
 export function ProfileQuestionsPage({ step }: { step: QuestionStep }): React.JSX.Element {
   const question = questions[step];
   const navigate = useNavigate();
-  const { status } = useAuth();
   const [selected, setSelected] = useState<string | null>(() => loadProfileAnswer(step));
   const [advancing, setAdvancing] = useState(false);
+  const advanceTimer = useRef<number | null>(null);
+
+  useEffect(
+    () => () => {
+      if (advanceTimer.current !== null) {
+        window.clearTimeout(advanceTimer.current);
+      }
+    },
+    [],
+  );
 
   const selectAnswer = (answer: QuestionAnswer): void => {
     if (advancing) {
@@ -214,20 +284,13 @@ export function ProfileQuestionsPage({ step }: { step: QuestionStep }): React.JS
     setAdvancing(true);
     saveProfileAnswer(step, answer.id);
 
-    const route = nextRoute[step];
-    if (route === null) {
+    if (step === lastStep) {
       markProfileQuestionsCompleted();
     }
 
-    window.setTimeout(() => {
-      if (route !== null) {
-        void navigate(route);
-        return;
-      }
-
-      void navigate(status === 'authenticated' ? activityRoutes.home : activityRoutes.login, {
-        replace: true,
-      });
+    const route = nextRoute[step];
+    advanceTimer.current = window.setTimeout(() => {
+      void navigate(route);
     }, 220);
   };
 
@@ -245,14 +308,16 @@ export function ProfileQuestionsPage({ step }: { step: QuestionStep }): React.JS
           <h1 id="profile-questions-title">Responde a estas preguntas</h1>
           <div
             className="profile-questions-progress"
-            aria-label={`Pregunta ${String(step)} de 7`}
+            aria-label={`Pregunta ${String(step)} de ${String(questionSteps.length)}`}
           >
             <span aria-hidden="true">
-              {[1, 2, 3, 4, 5, 6, 7].map((position) => (
+              {questionSteps.map((position) => (
                 <i key={position} className={position <= step ? 'is-complete' : ''} />
               ))}
             </span>
-            <strong>{step} de 7</strong>
+            <strong>
+              {step} de {questionSteps.length}
+            </strong>
           </div>
         </header>
 
@@ -279,7 +344,9 @@ export function ProfileQuestionsPage({ step }: { step: QuestionStep }): React.JS
             className="profile-answer-list"
             role="group"
             aria-label={`Opciones de la pregunta ${String(step)}`}
-            style={{ gridTemplateRows: `repeat(${String(question.answers.length)}, minmax(0, 1fr))` }}
+            style={{
+              gridTemplateRows: `repeat(${String(question.answers.length)}, minmax(0, 1fr))`,
+            }}
           >
             {question.answers.map((answer) => (
               <button

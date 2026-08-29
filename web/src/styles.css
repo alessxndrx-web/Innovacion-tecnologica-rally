@@ -3647,7 +3647,9 @@ body {
 
 .profile-question-step-2,
 .profile-question-step-3,
-.profile-question-step-5 {
+.profile-question-step-5,
+.profile-question-step-6,
+.profile-question-step-7 {
   --profile-panel-top: 22.88%;
   --profile-panel-height: 65%;
 }
@@ -3913,7 +3915,9 @@ body {
 
 .profile-question-step-3 .profile-question-copy h2,
 .profile-question-step-4 .profile-question-copy h2,
-.profile-question-step-5 .profile-question-copy h2 {
+.profile-question-step-5 .profile-question-copy h2,
+.profile-question-step-6 .profile-question-copy h2,
+.profile-question-step-7 .profile-question-copy h2 {
   font-size: clamp(1.25rem, min(1.62vw, 2.87vh), 2.0625rem);
 }
 
@@ -3927,7 +3931,9 @@ body {
 }
 
 .profile-question-step-4 .profile-answer,
-.profile-question-step-5 .profile-answer {
+.profile-question-step-5 .profile-answer,
+.profile-question-step-6 .profile-answer,
+.profile-question-step-7 .profile-answer {
   font-size: clamp(1.05rem, min(1.57vw, 2.78vh), 2rem);
 }
 
@@ -5802,7 +5808,8 @@ body {
 .rewards-page,
 .quick-page,
 .question-notice-page,
-.profile-questions-page {
+.profile-questions-page,
+.profile-thanks-page {
   animation: screen-fade 320ms ease both;
 }
 
@@ -5863,7 +5870,8 @@ body {
 .colors-mascot,
 .mini-mascot,
 .rewards-mascot,
-.quick-mascot-wrap img {
+.quick-mascot-wrap img,
+.thanks-mascot {
   animation: float-soft 4.6s ease-in-out infinite;
 }
 
@@ -5912,6 +5920,351 @@ body {
 .routine-card:active:not(:disabled),
 .colors-piece:active:not(:disabled) {
   transform: scale(0.96);
+}
+
+/* ---------------------------------------------------------------------------
+   Cierre del cuestionario de perfil (Figma 156:2, «Kivo Gracias - 21»).
+
+   El diseno mide 2047x1151, y de ahi salen todos los porcentajes: cada
+   coordenada es su valor en el lienzo dividido entre ese ancho o ese alto.
+   --------------------------------------------------------------------------- */
+.profile-thanks-page {
+  position: relative;
+  min-height: 100%;
+  overflow: hidden;
+  background: var(--color-bg);
+  color: #050505;
+  font-family: var(--font-display);
+}
+
+.thanks-panel {
+  position: absolute;
+  top: 5.039%;
+  left: 4.299%;
+  width: 91.451%;
+  height: 89.922%;
+  border-radius: min(4.2vw, 7.47vh);
+  background: #eff6f1;
+}
+
+.thanks-confetti,
+.thanks-mascot-scene {
+  position: absolute;
+  inset: 0;
+}
+
+.thanks-confetti img {
+  position: absolute;
+  display: block;
+  aspect-ratio: 1;
+  animation: completion-confetti-in 640ms cubic-bezier(0.2, 0.9, 0.25, 1.2) both;
+  animation-delay: var(--confetti-delay, 0ms);
+}
+
+.thanks-confetti-1 {
+  top: 5.647%;
+  left: 3.419%;
+  width: 10.259%;
+}
+.thanks-confetti-2 {
+  top: 4.779%;
+  left: 20.713%;
+  width: 4.298%;
+}
+.thanks-confetti-3 {
+  top: 11.729%;
+  left: 31.949%;
+  width: 4.25%;
+}
+.thanks-confetti-4 {
+  top: 5.474%;
+  left: 40.303%;
+  width: 4.006%;
+}
+.thanks-confetti-5 {
+  top: 16.508%;
+  left: 42.501%;
+  width: 5.276%;
+}
+.thanks-confetti-6 {
+  top: 11.556%;
+  left: 75.623%;
+  width: 3.42%;
+}
+.thanks-confetti-7 {
+  top: 18.593%;
+  left: 79.14%;
+  width: 4.397%;
+}
+.thanks-confetti-8 {
+  top: 12.337%;
+  left: 85.589%;
+  width: 9.77%;
+}
+.thanks-confetti-9 {
+  top: 28.671%;
+  left: 2.687%;
+  width: 5.227%;
+}
+.thanks-confetti-10 {
+  top: 30.235%;
+  left: 10.747%;
+  width: 4.397%;
+}
+.thanks-confetti-11 {
+  top: 34.579%;
+  left: 43.723%;
+  width: 6.058%;
+}
+.thanks-confetti-12 {
+  top: 33.449%;
+  left: 78.554%;
+  width: 5.862%;
+}
+.thanks-confetti-13 {
+  top: 41.269%;
+  left: 88.911%;
+  width: 7.083%;
+}
+
+/* La sombra la dibuja un SVG difuminado que se sale de su propia caja; el
+   desborde del diseno se conserva tal cual en el interior. */
+.thanks-mascot-shadow {
+  position: absolute;
+  top: 84.101%;
+  left: 9.77%;
+  width: 26.624%;
+  height: 6.951%;
+}
+
+.thanks-mascot-shadow img {
+  position: absolute;
+  inset: -30% -4.4%;
+  display: block;
+  width: 108.8%;
+  height: 160%;
+}
+
+.thanks-mascot {
+  position: absolute;
+  top: 16.073%;
+  left: 6.351%;
+  width: 34.196%;
+  height: 73.849%;
+  object-fit: contain;
+}
+
+.thanks-ray {
+  position: absolute;
+  display: grid;
+  place-items: center;
+}
+
+.thanks-ray i {
+  display: block;
+  width: min(0.59vw, 1.04vh);
+  border-radius: min(0.29vw, 0.52vh);
+  background: #ffc447;
+}
+
+.thanks-ray-1 {
+  top: 21.72%;
+  left: 32.605%;
+  width: 2.773%;
+  height: 5.595%;
+}
+.thanks-ray-1 i {
+  height: min(3.62vw, 6.43vh);
+  rotate: 40deg;
+}
+
+.thanks-ray-2 {
+  top: 24.327%;
+  left: 33.407%;
+  width: 3.542%;
+  height: 4.475%;
+}
+.thanks-ray-2 i {
+  height: min(3.81vw, 6.78vh);
+  rotate: 58deg;
+}
+
+.thanks-ray-3 {
+  top: 28.236%;
+  left: 34.132%;
+  width: 3.565%;
+  height: 1.903%;
+}
+.thanks-ray-3 i {
+  height: min(3.52vw, 6.26vh);
+  rotate: 82deg;
+}
+
+.thanks-copy {
+  position: absolute;
+  inset: 0;
+}
+
+.thanks-copy h1 {
+  position: absolute;
+  top: 21.286%;
+  left: 65.462%;
+  width: 35.174%;
+  margin: 0;
+  translate: -50% 0;
+  font-size: clamp(1.9rem, min(3.22vw, 5.73vh), 4.125rem);
+  font-weight: 800;
+  line-height: 1.36;
+  text-align: center;
+}
+
+.thanks-copy > p {
+  position: absolute;
+  top: 43.44%;
+  left: 65.095%;
+  width: 35.906%;
+  margin: 0;
+  translate: -50% 0;
+  color: #111;
+  font-size: clamp(1.05rem, min(1.86vw, 3.3vh), 2.375rem);
+  font-weight: 400;
+  line-height: 1.49;
+  text-align: center;
+}
+
+.thanks-continue {
+  position: absolute;
+  top: 62.554%;
+  left: 48.363%;
+  width: 37.86%;
+  height: 12.858%;
+  display: grid;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: #20b2b3;
+  color: #fff;
+  font-family: inherit;
+  place-items: center;
+  cursor: pointer;
+  transition:
+    transform 160ms ease,
+    background 160ms ease;
+}
+
+.thanks-continue > span:first-child {
+  font-size: clamp(1.5rem, min(2.83vw, 5.04vh), 3.625rem);
+  font-weight: 600;
+  line-height: 1;
+}
+
+.thanks-continue-arrow {
+  position: absolute;
+  right: 4.5%;
+  font-size: clamp(2rem, min(4vw, 7.12vh), 5.125rem);
+  font-weight: 400;
+  line-height: 1;
+}
+
+.thanks-continue:hover {
+  background: #17a0a4;
+  transform: translateY(-4px);
+}
+
+.thanks-continue:active {
+  transform: translateY(1px);
+}
+
+.thanks-continue:focus-visible {
+  outline: 5px solid #7059a8;
+  outline-offset: 5px;
+}
+
+/* En vertical el lienzo apaisado del diseno no cabe: el confeti pasa a ser
+   fondo y el contenido se apila. */
+@media (max-width: 900px), (max-aspect-ratio: 4 / 5) {
+  .profile-thanks-page {
+    display: flex;
+    min-height: 100%;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1.5rem;
+    overflow: auto;
+    padding: 2.5rem 1.25rem 3rem;
+  }
+
+  .thanks-panel {
+    inset: 1rem;
+    top: 1rem;
+    left: 1rem;
+    width: auto;
+    height: auto;
+    border-radius: 32px;
+  }
+
+  .thanks-confetti {
+    opacity: 0.55;
+  }
+
+  .thanks-mascot-scene {
+    position: relative;
+    inset: auto;
+    width: min(62vw, 260px);
+    aspect-ratio: 700 / 850;
+  }
+
+  .thanks-mascot {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  .thanks-mascot-shadow,
+  .thanks-ray {
+    display: none;
+  }
+
+  .thanks-copy {
+    position: relative;
+    inset: auto;
+    display: flex;
+    width: min(90vw, 460px);
+    flex-direction: column;
+    align-items: center;
+    gap: 1.25rem;
+  }
+
+  .thanks-copy h1,
+  .thanks-copy > p,
+  .thanks-continue {
+    position: relative;
+    top: auto;
+    left: auto;
+    width: 100%;
+    translate: none;
+  }
+
+  .thanks-copy h1 {
+    font-size: clamp(1.75rem, 8vw, 2.5rem);
+  }
+
+  .thanks-copy > p {
+    font-size: clamp(1rem, 4.4vw, 1.35rem);
+  }
+
+  .thanks-continue {
+    height: 72px;
+  }
+
+  .thanks-continue > span:first-child {
+    font-size: clamp(1.25rem, 5.5vw, 1.75rem);
+  }
+
+  .thanks-continue-arrow {
+    font-size: 2.25rem;
+  }
 }
 
 /* Regla final sobre el movimiento: quien pida menos animación deja de verla en
