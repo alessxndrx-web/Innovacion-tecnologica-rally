@@ -20,6 +20,8 @@ export const errors = {
     new AppError(401, 'UNAUTHORIZED', 'Debes iniciar sesión para realizar esta acción.'),
   invalidCredentials: () =>
     new AppError(401, 'INVALID_CREDENTIALS', 'El correo o la contraseña no son válidos.'),
+  invalidRefreshToken: () =>
+    new AppError(401, 'INVALID_REFRESH_TOKEN', 'La sesión expiró. Inicia sesión nuevamente.'),
   forbiddenLearner: () =>
     new AppError(404, 'LEARNER_NOT_FOUND', 'No se encontró el perfil solicitado.'),
   activityNotFound: () =>

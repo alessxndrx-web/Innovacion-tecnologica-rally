@@ -1,15 +1,37 @@
-# Configuración opcional y exclusiva para demostración local del MVP.
+# Configuración opcional para demostración local del MVP.
+# Levanta PostgreSQL y la API: `docker compose up`.
 services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: adapta
+      POSTGRES_PASSWORD: adapta-local
+      POSTGRES_DB: adapta
+    ports:
+      - '127.0.0.1:5432:5432'
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U adapta -d adapta']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    init: true
+
   backend:
     build:
       context: .
       target: development
+    depends_on:
+      db:
+        condition: service_healthy
     environment:
       NODE_ENV: development
       PORT: 3000
-      DATABASE_URL: file:./dev.db
+      DATABASE_URL: postgresql://adapta:adapta-local@db:5432/adapta?schema=public
       JWT_ACCESS_SECRET: local-compose-secret-change-before-any-real-deployment
-      ACCESS_TOKEN_TTL: 1h
+      ACCESS_TOKEN_TTL: 15m
+      REFRESH_TOKEN_TTL: 30d
       CORS_ORIGINS: http://localhost:5173
       LOG_LEVEL: info
       TRUST_PROXY: 'false'
@@ -36,3 +58,6 @@ services:
       retries: 12
       start_period: 30s
     init: true
+
+volumes:
+  postgres-data:

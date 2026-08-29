@@ -28,10 +28,16 @@ const environmentSchema = z.object({
   PORT: z.coerce.number().int().min(1).max(65_535).default(3000),
   DATABASE_URL: z.string().min(1, 'DATABASE_URL es obligatoria.'),
   JWT_ACCESS_SECRET: z.string().min(32, 'JWT_ACCESS_SECRET debe tener al menos 32 caracteres.'),
+  // Vida corta a propósito: ahora existe renovación, así que un token robado
+  // deja de servir en minutos en lugar de en una hora.
   ACCESS_TOKEN_TTL: z
     .string()
     .regex(durationPattern, 'ACCESS_TOKEN_TTL debe usar s, m, h o d (por ejemplo, 15m).')
-    .default('1h'),
+    .default('15m'),
+  REFRESH_TOKEN_TTL: z
+    .string()
+    .regex(durationPattern, 'REFRESH_TOKEN_TTL debe usar s, m, h o d (por ejemplo, 30d).')
+    .default('30d'),
   CORS_ORIGINS: z.string().default('http://localhost:5173'),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
   // Detrás de un balanceador o CDN, sin esto la limitación por IP ve siempre la
@@ -42,6 +48,9 @@ const environmentSchema = z.object({
   AUTH_RATE_LIMIT_MAX: z.coerce.number().int().min(1).default(10),
   AUTH_RATE_LIMIT_WINDOW: z.string().regex(durationPattern).default('15m'),
   ENABLE_DOCS: booleanFlag.optional(),
+  // Sin Redis, cada instancia lleva su propia cuenta y el límite efectivo se
+  // multiplica por el número de réplicas.
+  REDIS_URL: z.string().url('REDIS_URL debe ser una URL válida.').optional(),
 });
 
 export interface RateLimitConfig {
@@ -55,12 +64,15 @@ export interface AppConfig {
   databaseUrl: string;
   jwtAccessSecret: string;
   accessTokenTtlSeconds: number;
+  refreshTokenTtlSeconds: number;
   corsOrigins: string[];
   logLevel: 'fatal' | 'error' | 'warn' | 'info' | 'debug' | 'trace' | 'silent';
   trustProxy: boolean;
   rateLimit: RateLimitConfig;
   authRateLimit: RateLimitConfig;
   enableDocs: boolean;
+  /** `null` cuando no se configuró Redis: el límite queda en memoria. */
+  redisUrl: string | null;
 }
 
 export function loadConfig(environment: NodeJS.ProcessEnv = process.env): AppConfig {
@@ -101,6 +113,7 @@ export function loadConfig(environment: NodeJS.ProcessEnv = process.env): AppCon
     databaseUrl: env.DATABASE_URL,
     jwtAccessSecret: env.JWT_ACCESS_SECRET,
     accessTokenTtlSeconds: durationToSeconds(env.ACCESS_TOKEN_TTL),
+    refreshTokenTtlSeconds: durationToSeconds(env.REFRESH_TOKEN_TTL),
     corsOrigins,
     logLevel: env.LOG_LEVEL,
     trustProxy: env.TRUST_PROXY === 'true',
@@ -114,5 +127,6 @@ export function loadConfig(environment: NodeJS.ProcessEnv = process.env): AppCon
     },
     enableDocs:
       env.ENABLE_DOCS === undefined ? env.NODE_ENV !== 'production' : env.ENABLE_DOCS === 'true',
+    redisUrl: env.REDIS_URL ?? null,
   };
 }

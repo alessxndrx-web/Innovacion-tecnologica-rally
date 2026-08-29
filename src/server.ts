@@ -19,7 +19,7 @@ function registerShutdownHandlers(app: FastifyInstance): void {
         return;
       }
       shuttingDown = true;
-      app.log.info({ signal }, 'Cerrando ADAPTA');
+      app.log.info({ signal }, 'Cerrando Sinappsis');
 
       const forceExit = setTimeout(() => {
         app.log.error('El cierre ordenado excedió el tiempo límite');

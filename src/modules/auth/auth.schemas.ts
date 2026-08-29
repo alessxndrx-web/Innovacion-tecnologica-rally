@@ -33,14 +33,23 @@ export const loginBodySchema = z.object({
   password: z.string().min(1).max(128),
 });
 
+export const refreshBodySchema = z
+  .object({ refreshToken: z.string().min(1).max(512) })
+  .strict('Solo se permite el token de renovación.');
+
 export const authenticationResponseSchema = dataResponseSchema(
   z.object({
     accessToken: z.string(),
+    refreshToken: z.string(),
     tokenType: z.literal('Bearer'),
     expiresIn: z.number().int().positive(),
+    refreshExpiresIn: z.number().int().positive(),
     user: publicUserSchema,
   }),
 );
 
+export const currentUserResponseSchema = dataResponseSchema(publicUserSchema);
+
 export type RegisterBody = z.infer<typeof registerBodySchema>;
 export type LoginBody = z.infer<typeof loginBodySchema>;
+export type RefreshBody = z.infer<typeof refreshBodySchema>;

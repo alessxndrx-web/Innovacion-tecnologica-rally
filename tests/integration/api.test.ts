@@ -29,6 +29,7 @@ async function resetDatabase(): Promise<void> {
   await prisma.activityAttempt.deleteMany();
   await prisma.learningProfile.deleteMany();
   await prisma.learner.deleteMany();
+  await prisma.refreshToken.deleteMany();
   await prisma.user.deleteMany();
   await prisma.activityStep.deleteMany();
   await prisma.activity.deleteMany();
@@ -75,7 +76,12 @@ async function resetDatabase(): Promise<void> {
   });
 }
 
-async function registerAdult(email: string): Promise<string> {
+interface Session {
+  accessToken: string;
+  refreshToken: string;
+}
+
+async function registerSession(email: string): Promise<Session> {
   const response = await app.inject({
     method: 'POST',
     url: '/api/v1/auth/register',
@@ -87,7 +93,15 @@ async function registerAdult(email: string): Promise<string> {
     },
   });
   expect(response.statusCode).toBe(201);
-  return response.json<{ data: { accessToken: string } }>().data.accessToken;
+  return response.json<{ data: Session }>().data;
+}
+
+async function registerAdult(email: string): Promise<string> {
+  return (await registerSession(email)).accessToken;
+}
+
+async function refresh(refreshToken: string) {
+  return app.inject({ method: 'POST', url: '/api/v1/auth/refresh', payload: { refreshToken } });
 }
 
 async function createLearner(token: string, displayName = 'Luna'): Promise<string> {
@@ -231,6 +245,119 @@ describe('autenticación', () => {
 
   it('exige token en las rutas protegidas', async () => {
     const response = await app.inject({ method: 'GET', url: '/api/v1/learners' });
+
+    expect(response.statusCode).toBe(401);
+  });
+
+  it('devuelve la cuenta autenticada en /auth/me', async () => {
+    const session = await registerSession('yo@example.test');
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api/v1/auth/me',
+      headers: { authorization: `Bearer ${session.accessToken}` },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json<{ data: { email: string } }>().data.email).toBe('yo@example.test');
+    expect(response.body).not.toContain('passwordHash');
+  });
+});
+
+describe('ciclo de vida de la sesión', () => {
+  it('renueva la sesión y rota el token de renovación', async () => {
+    const session = await registerSession('renueva@example.test');
+
+    const renewed = await refresh(session.refreshToken);
+
+    expect(renewed.statusCode).toBe(200);
+    const data = renewed.json<{ data: Session }>().data;
+    expect(data.refreshToken).not.toBe(session.refreshToken);
+    expect(data.accessToken.length).toBeGreaterThan(0);
+
+    // El token nuevo sirve para autenticar.
+    const me = await app.inject({
+      method: 'GET',
+      url: '/api/v1/auth/me',
+      headers: { authorization: `Bearer ${data.accessToken}` },
+    });
+    expect(me.statusCode).toBe(200);
+  });
+
+  it('invalida el token de renovación anterior tras rotarlo', async () => {
+    const session = await registerSession('rotado@example.test');
+    await refresh(session.refreshToken);
+
+    const reused = await refresh(session.refreshToken);
+
+    expect(reused.statusCode).toBe(401);
+    expect(reused.json<{ error: { code: string } }>().error.code).toBe('INVALID_REFRESH_TOKEN');
+  });
+
+  it('revoca la cadena entera si se reutiliza un token ya rotado', async () => {
+    const session = await registerSession('robado@example.test');
+    const renewed = await refresh(session.refreshToken);
+    const current = renewed.json<{ data: Session }>().data.refreshToken;
+
+    // Alguien presenta el token viejo: señal de que la cadena está comprometida.
+    await refresh(session.refreshToken);
+
+    // El token legítimo en circulación también queda anulado.
+    const afterBreach = await refresh(current);
+    expect(afterBreach.statusCode).toBe(401);
+  });
+
+  it('cierra la sesión y deja de renovar', async () => {
+    const session = await registerSession('cierra@example.test');
+
+    const logout = await app.inject({
+      method: 'POST',
+      url: '/api/v1/auth/logout',
+      payload: { refreshToken: session.refreshToken },
+    });
+    expect(logout.statusCode).toBe(204);
+
+    const afterLogout = await refresh(session.refreshToken);
+    expect(afterLogout.statusCode).toBe(401);
+  });
+
+  it('acepta un cierre de sesión con un token desconocido sin revelar nada', async () => {
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/v1/auth/logout',
+      payload: { refreshToken: 'token-que-no-existe' },
+    });
+
+    expect(response.statusCode).toBe(204);
+  });
+
+  it('cierra la sesión en todos los dispositivos', async () => {
+    const first = await registerSession('multiples@example.test');
+    const login = await app.inject({
+      method: 'POST',
+      url: '/api/v1/auth/login',
+      payload: { email: 'multiples@example.test', password: 'ClaveSegura2026' },
+    });
+    const second = login.json<{ data: Session }>().data;
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/v1/auth/logout-all',
+      headers: { authorization: `Bearer ${first.accessToken}` },
+    });
+    expect(response.statusCode).toBe(204);
+
+    expect((await refresh(first.refreshToken)).statusCode).toBe(401);
+    expect((await refresh(second.refreshToken)).statusCode).toBe(401);
+  });
+
+  it('rechaza renovar cuando la cuenta está desactivada', async () => {
+    const session = await registerSession('inactiva@example.test');
+    await prisma.user.update({
+      where: { email: 'inactiva@example.test' },
+      data: { isActive: false },
+    });
+
+    const response = await refresh(session.refreshToken);
 
     expect(response.statusCode).toBe(401);
   });

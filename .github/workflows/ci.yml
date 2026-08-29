@@ -5,9 +5,28 @@ on:
     branches: [main]
   pull_request:
 
+env:
+  TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/adapta_ci?schema=public
+
 jobs:
   quality:
     runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: adapta_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+
     steps:
       - uses: actions/checkout@v4
 
@@ -27,7 +46,4 @@ jobs:
       - run: pnpm build
 
       - name: Pruebas de integración
-        run: pnpm db:migrate && pnpm test:integration
-        env:
-          DATABASE_URL: file:./ci.db
-          JWT_ACCESS_SECRET: ci-secret-with-at-least-thirty-two-characters
+        run: pnpm test:integration

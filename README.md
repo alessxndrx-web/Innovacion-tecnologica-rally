@@ -1,6 +1,6 @@
 # Sinappsis Backend — MVP
 
-API REST para demostrar un flujo educativo básico: una persona adulta se registra, crea un estudiante, configura sus apoyos, consulta actividades, completa un intento y revisa el progreso. Está construida con Node.js, TypeScript, Fastify, Prisma y SQLite.
+API REST para demostrar un flujo educativo básico: una persona adulta se registra, crea un estudiante, configura sus apoyos, consulta actividades, completa un intento y revisa el progreso. Está construida con Node.js, TypeScript, Fastify, Prisma y PostgreSQL.
 
 La adaptación es determinista: devuelve la actividad original junto con opciones de presentación derivadas del perfil. No usa IA, no reescribe instrucciones y no almacena diagnósticos.
 
@@ -8,29 +8,40 @@ La adaptación es determinista: devuelve la actividad original junto con opcione
 
 - Node.js 20 o posterior
 - pnpm 11
+- PostgreSQL 16 o posterior, local o gestionado
 - `curl` y, para copiar identificadores en el ejemplo, `jq`
+
+Si prefiere no instalar PostgreSQL, `docker compose up` levanta la base y la API
+juntas y no hace falta nada más.
 
 ```bash
 pnpm install
 cp .env.example .env
+# Ajuste DATABASE_URL con su cadena de conexión antes de continuar.
 pnpm db:generate
 pnpm db:migrate
 pnpm db:seed
 ```
 
+Las pruebas de integración usan una base aparte y la reconstruyen en cada
+ejecución. Se configura con `TEST_DATABASE_URL`, deliberadamente distinta de
+`DATABASE_URL` para que nunca puedan borrar la base de desarrollo. Si no se define,
+usan `postgresql://postgres:adaptadev@127.0.0.1:5432/adapta_test`.
+
 En PowerShell, copie el entorno con `Copy-Item .env.example .env`. El seed carga cinco actividades en español: Vocales, Números del 1 al 5, Colores, Formas y Secuencias simples.
 
 ## Variables de entorno
 
-| Variable            | Ejemplo                   | Uso                                               |
-| ------------------- | ------------------------- | ------------------------------------------------- |
-| `NODE_ENV`          | `development`             | Entorno de ejecución                              |
-| `PORT`              | `3000`                    | Puerto HTTP                                       |
-| `DATABASE_URL`      | `file:./dev.db`           | Archivo SQLite; Prisma lo crea en `prisma/dev.db` |
-| `JWT_ACCESS_SECRET` | secreto de 32+ caracteres | Firma del JWT de acceso                           |
-| `ACCESS_TOKEN_TTL`  | `1h`                      | Vigencia del JWT (`s`, `m`, `h` o `d`)            |
-| `CORS_ORIGINS`      | `http://localhost:5173`   | Orígenes permitidos, separados por comas          |
-| `LOG_LEVEL`         | `info`                    | Nivel de logs                                     |
+| Variable            | Ejemplo                   | Uso                                              |
+| ------------------- | ------------------------- | ------------------------------------------------ |
+| `NODE_ENV`          | `development`             | Entorno de ejecución                             |
+| `PORT`              | `3000`                    | Puerto HTTP                                      |
+| `DATABASE_URL`      | `postgresql://…`          | Cadena de conexión a PostgreSQL                  |
+| `JWT_ACCESS_SECRET` | secreto de 32+ caracteres | Firma del JWT de acceso                          |
+| `ACCESS_TOKEN_TTL`  | `15m`                     | Vigencia del JWT de acceso (`s`, `m`, `h` o `d`) |
+| `REFRESH_TOKEN_TTL` | `30d`                     | Vigencia del token de renovación                 |
+| `CORS_ORIGINS`      | `http://localhost:5173`   | Orígenes permitidos, separados por comas         |
+| `LOG_LEVEL`         | `info`                    | Nivel de logs                                    |
 
 Variables adicionales, todas con valor por defecto:
 
@@ -42,6 +53,7 @@ Variables adicionales, todas con valor por defecto:
 | `AUTH_RATE_LIMIT_MAX`    | `10`          | Peticiones a `/auth/register` y `/auth/login` por IP y ventana |
 | `AUTH_RATE_LIMIT_WINDOW` | `15m`         | Ventana del límite de autenticación                            |
 | `ENABLE_DOCS`            | según entorno | Documentación OpenAPI en `/docs`; activa salvo en producción   |
+| `REDIS_URL`              | sin definir   | Almacén compartido de la limitación de tasa entre instancias   |
 
 Cambie `JWT_ACCESS_SECRET` antes de iniciar. Puede generar uno con `openssl rand -base64 48`.
 En producción el arranque falla si conserva un secreto de ejemplo o si `CORS_ORIGINS` es `*`.
@@ -77,10 +89,10 @@ pnpm build
 ```
 
 `pnpm test` cubre la lógica pura (adaptación y puntuación). `pnpm test:integration`
-levanta la API completa sobre `prisma/test.db`, que reconstruye desde cero en cada
-ejecución, y cubre autenticación, aislamiento entre cuentas, el flujo de intentos y
-el formato de los errores de protocolo. Ambas suites y la compilación se ejecutan en
-GitHub Actions en cada push y pull request.
+levanta la API completa sobre la base de `TEST_DATABASE_URL` y cubre autenticación,
+ciclo de sesión, aislamiento entre cuentas, el flujo de intentos y el formato de los
+errores de protocolo. Ambas suites y la compilación se ejecutan en GitHub Actions en
+cada push y pull request.
 
 Con la documentación activa, el explorador OpenAPI queda en `http://localhost:3000/docs`.
 
@@ -110,7 +122,29 @@ LOGIN_RESPONSE=$(curl -sS -X POST "$API_URL/api/v1/auth/login" \
   -d '{"email":"adulto@example.test","password":"ClaveSegura2026"}')
 
 export ACCESS_TOKEN=$(printf '%s' "$LOGIN_RESPONSE" | jq -r '.data.accessToken')
+export REFRESH_TOKEN=$(printf '%s' "$LOGIN_RESPONSE" | jq -r '.data.refreshToken')
 ```
+
+El acceso dura 15 minutos; la interfaz debe renovarlo con el token de renovación,
+que rota en cada uso. Consultar la cuenta activa, renovar y cerrar sesión:
+
+```bash
+curl -sS -H "Authorization: Bearer $ACCESS_TOKEN" "$API_URL/api/v1/auth/me" | jq
+
+REFRESHED=$(curl -sS -X POST "$API_URL/api/v1/auth/refresh" \
+  -H "Content-Type: application/json" \
+  -d "{\"refreshToken\":\"$REFRESH_TOKEN\"}")
+export ACCESS_TOKEN=$(printf '%s' "$REFRESHED" | jq -r '.data.accessToken')
+export REFRESH_TOKEN=$(printf '%s' "$REFRESHED" | jq -r '.data.refreshToken')
+
+curl -sS -X POST "$API_URL/api/v1/auth/logout" \
+  -H "Content-Type: application/json" \
+  -d "{\"refreshToken\":\"$REFRESH_TOKEN\"}" -o /dev/null -w '%{http_code}\n'
+```
+
+Cada renovación invalida el token anterior. Si alguien vuelve a presentar uno ya
+rotado, se interpreta como credencial robada y se revoca toda la cadena de
+sesiones nacida de ese inicio de sesión, no solo ese token.
 
 ### 2. Crear y seleccionar un estudiante
 
@@ -234,21 +268,26 @@ Para comprobar el aislamiento, registre una segunda cuenta y repita una consulta
 ## Limitaciones conocidas
 
 - Es un prototipo local, sin frontend, despliegue productivo, panel administrativo ni gestión del catálogo por API.
-- Usa un único JWT de acceso. No incluye recuperación de contraseña, verificación de correo, autenticación externa ni sesiones por dispositivo.
-- El token no se puede revocar antes de que expire: no hay cierre de sesión, lista
-  de revocación ni identificador de token. Desactivar la cuenta (`isActive`) sí
-  corta el acceso, porque se comprueba en cada petición.
-- La limitación de tasa se guarda en memoria del proceso: con más de una instancia
-  cada una lleva su propia cuenta. Para varias réplicas hace falta un almacén
-  compartido, por ejemplo Redis.
+- No incluye recuperación de contraseña, verificación de correo ni autenticación externa.
+- El JWT de acceso no se puede revocar antes de que expire, pero dura 15 minutos y
+  la renovación sí es revocable. Desactivar la cuenta (`isActive`) corta el acceso
+  de inmediato, porque se comprueba en cada petición.
+- Sin `REDIS_URL`, la limitación de tasa cuenta por proceso: correcta con una sola
+  instancia, insuficiente con varias réplicas.
 - Los listados de actividades y estudiantes no están paginados.
 - Cada estudiante pertenece a la cuenta adulta que lo creó; no hay funciones para compartirlo con otras cuentas.
-- SQLite facilita la demostración local, pero no cubre concurrencia elevada, alta disponibilidad ni copias de seguridad administradas.
+- PostgreSQL cubre la concurrencia, pero alta disponibilidad, copias de seguridad y retención siguen siendo trabajo de infraestructura, no del repositorio.
 - El catálogo contiene solo las cinco actividades del seed; no hay archivos multimedia generados.
 - La adaptación solo cambia opciones de presentación. No usa IA ni ofrece recomendaciones médicas.
 - La evaluación acepta únicamente respuestas deterministas compatibles con el contenido sembrado.
 - Las pruebas son deliberadamente enfocadas al flujo principal, no exhaustivas.
 
-## Migración futura a PostgreSQL
+## Pendiente antes de producción
 
-Para una siguiente etapa, cambie el proveedor de Prisma a `postgresql`, configure una URL de PostgreSQL y genere una migración nueva para ese motor. Revise tipos, restricciones, concurrencia y datos antes de importar información; las migraciones SQLite no deben aplicarse directamente sobre PostgreSQL. Docker, despliegue, backups y observabilidad deben validarse como trabajo separado.
+- Copias de seguridad, retención y alta disponibilidad de la base de datos.
+- `REDIS_URL` configurado si se despliega más de una instancia.
+- Verificación de correo y recuperación de contraseña.
+- Tratamiento de datos de menores: consentimiento parental, minimización, derecho
+  de supresión, cifrado en reposo y registro de auditoría de accesos. Los perfiles
+  de apoyo educativo son categoría sensible y conviene resolverlo antes de crecer.
+- Observabilidad: métricas, trazas y alertas.

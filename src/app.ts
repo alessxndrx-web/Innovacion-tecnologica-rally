@@ -6,6 +6,7 @@ import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
 import type { PrismaClient } from '@prisma/client';
 import Fastify, { type FastifyInstance } from 'fastify';
+import Redis from 'ioredis';
 import {
   jsonSchemaTransform,
   serializerCompiler,
@@ -87,10 +88,26 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
   await fastify.register(helmet, config.enableDocs ? { contentSecurityPolicy: false } : {});
   await fastify.register(cors, { origin: config.corsOrigins });
 
+  // El almacén en memoria cuenta por proceso: con varias réplicas el límite
+  // efectivo se multiplica por el número de instancias. Redis lo hace común.
+  const redis = config.redisUrl === null ? null : new Redis(config.redisUrl);
+  if (redis === null && config.nodeEnv === 'production') {
+    fastify.log.warn(
+      'REDIS_URL no está configurada: la limitación de tasa cuenta por proceso y no será ' +
+        'correcta si se ejecuta más de una instancia.',
+    );
+  }
+  if (redis !== null) {
+    fastify.addHook('onClose', async () => {
+      await redis.quit();
+    });
+  }
+
   await fastify.register(rateLimit, {
     global: true,
     max: config.rateLimit.max,
     timeWindow: config.rateLimit.windowMs,
+    ...(redis === null ? {} : { redis }),
     // Las sondas de salud del orquestador no deben consumir cuota.
     allowList: (request) => request.url === '/health',
     errorResponseBuilder: (request, context) => ({
@@ -114,8 +131,8 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
     await fastify.register(swagger, {
       openapi: {
         info: {
-          title: 'ADAPTA API',
-          description: 'Backend del MVP de ADAPTA.',
+          title: 'Sinappsis API',
+          description: 'Backend del MVP de Sinappsis.',
           version: '0.1.0',
         },
         components: {
