@@ -10,7 +10,9 @@ import grapes from '../assets/sequence-visual/grapes.png';
 import kivoIntrigued from '../assets/sequence-visual/kivo-intrigued.png';
 import progressComplete from '../assets/sequence-visual/progress-complete.svg';
 import progressPending from '../assets/sequence-visual/progress-pending.svg';
-import { activityRoutes } from '../routes/activity-flow';
+import { ActivityNav } from '../components/ActivityNav';
+import { ActivityProgress } from '../components/ActivityProgress';
+import { activityRoutes, flowStepFor, titleFor } from '../routes/activity-flow';
 
 type Answer = 'banana' | 'grapes' | 'apple';
 
@@ -22,6 +24,7 @@ const ANSWERS: Array<{ id: Answer; image: string; label: string }> = [
 
 export function SequenceVisualPage(): React.JSX.Element {
   const navigate = useNavigate();
+  const step = flowStepFor(activityRoutes.sequence);
   const [selectedAnswer, setSelectedAnswer] = useState<Answer | null>(null);
   const isCorrect = selectedAnswer === 'banana';
 
@@ -38,8 +41,8 @@ export function SequenceVisualPage(): React.JSX.Element {
         <button
           className="sequence-back"
           type="button"
-          onClick={() => void navigate(activityRoutes.instruction)}
-          aria-label="Volver a Instrucción única"
+          onClick={() => void navigate(step.previous)}
+          aria-label={`Volver a ${titleFor(step.previous)}`}
         >
           <img src={backButton} alt="" />
           <span aria-hidden="true">‹</span>
@@ -47,14 +50,13 @@ export function SequenceVisualPage(): React.JSX.Element {
 
         <div className="sequence-title">Secuencia Visual</div>
 
-        <div className="sequence-progress" aria-label="Progreso 2 de 4">
-          <span className="progress-dots" aria-hidden="true">
-            {[0, 1, 2, 3].map((step) => (
-              <img key={step} src={step < 2 ? progressComplete : progressPending} alt="" />
-            ))}
-          </span>
-          <span>2/4</span>
-        </div>
+        <ActivityProgress
+          className="sequence-progress"
+          dotsClassName="progress-dots"
+          step={step}
+          activeIcon={progressComplete}
+          pendingIcon={progressPending}
+        />
 
         <div className="sequence-avatar" aria-label="Perfil de Kivo">
           <img src={avatarFrame} alt="" />
@@ -75,9 +77,9 @@ export function SequenceVisualPage(): React.JSX.Element {
             className={`sequence-question${isCorrect ? ' sequence-question-correct reward-pop' : ''}`}
             type="button"
             disabled={!isCorrect}
-            onClick={() => void navigate(activityRoutes.matching)}
+            onClick={() => void navigate(step.next)}
             aria-label={
-              isCorrect ? 'Continuar a Emparejar la palabra' : 'Selecciona la figura que sigue'
+              isCorrect ? `Continuar a ${titleFor(step.next)}` : 'Selecciona la figura que sigue'
             }
           >
             {isCorrect ? '✓' : '?'}
@@ -110,6 +112,7 @@ export function SequenceVisualPage(): React.JSX.Element {
           })}
         </div>
       </section>
+      <ActivityNav step={step} />
     </main>
   );
 }

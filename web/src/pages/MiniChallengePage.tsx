@@ -8,18 +8,23 @@ import mascot from '../assets/mini-challenge/mascot.png';
 import progressActive from '../assets/mini-challenge/progress-active.svg';
 import progressPending from '../assets/mini-challenge/progress-pending.svg';
 import successCircle from '../assets/mini-challenge/success-circle.svg';
-import { activityRoutes } from '../routes/activity-flow';
+import { ActivityNav } from '../components/ActivityNav';
+import { activityRoutes, flowStepFor, titleFor } from '../routes/activity-flow';
+
+/** Cuadrados que hay que colorear, según el enunciado de la actividad. */
+const SQUARES_TO_COLOR = 2;
 
 export function MiniChallengePage(): React.JSX.Element {
   const navigate = useNavigate();
-  const [colored, setColored] = useState<number[]>([0, 1]);
-  const isComplete = colored.length === 2;
+  const step = flowStepFor(activityRoutes.miniChallenge);
+  const [colored, setColored] = useState<number[]>([]);
+  const isComplete = colored.length === SQUARES_TO_COLOR;
 
   const toggleSquare = (index: number): void => {
     setColored((current) =>
       current.includes(index)
         ? current.filter((item) => item !== index)
-        : current.length < 2
+        : current.length < SQUARES_TO_COLOR
           ? [...current, index]
           : current,
     );
@@ -31,17 +36,17 @@ export function MiniChallengePage(): React.JSX.Element {
         <button
           type="button"
           className="mini-back"
-          onClick={() => void navigate(activityRoutes.tdahMenu)}
-          aria-label="Volver al menú TDAH"
+          onClick={() => void navigate(step.previous)}
+          aria-label={`Volver a ${titleFor(step.previous)}`}
         >
           <img src={back} alt="" />
           <span aria-hidden="true">←</span>
         </button>
         <h1>Mini retos</h1>
-        <div className="mini-progress" aria-label="Progreso 1 de 1">
-          <span>
-            {[0, 1, 2].map((step) => (
-              <img key={step} src={step < 2 ? progressActive : progressPending} alt="" />
+        <div className="mini-progress" aria-label="Reto 1 de 1">
+          <span aria-hidden="true">
+            {[0, 1, 2].map((dot) => (
+              <img key={dot} src={dot < 2 ? progressActive : progressPending} alt="" />
             ))}
           </span>
           <b>1/1</b>
@@ -60,7 +65,7 @@ export function MiniChallengePage(): React.JSX.Element {
               type="button"
               className={`mini-square${colored.includes(index) ? ' is-blue' : ''}`}
               onClick={() => toggleSquare(index)}
-              aria-label={`Cuadrado ${index + 1}${colored.includes(index) ? ' azul' : ''}`}
+              aria-label={`Cuadrado ${String(index + 1)}${colored.includes(index) ? ' azul' : ''}`}
               aria-pressed={colored.includes(index)}
             />
           ))}
@@ -73,8 +78,8 @@ export function MiniChallengePage(): React.JSX.Element {
             <button
               type="button"
               className="mini-success-button reward-pop"
-              onClick={() => void navigate(activityRoutes.rewards)}
-              aria-label="Ver recompensas"
+              onClick={() => void navigate(step.next)}
+              aria-label={`Continuar a ${titleFor(step.next)}`}
             >
               <img src={successCircle} alt="" />
               <span aria-hidden="true">✓</span>
@@ -82,6 +87,7 @@ export function MiniChallengePage(): React.JSX.Element {
           )}
         </footer>
       </section>
+      <ActivityNav step={step} menu={activityRoutes.tdahMenu} />
     </main>
   );
 }

@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import activityFlag from '../assets/activities/activity-flag.png';
 import activityMedal from '../assets/activities/activity-medal.png';
-import activityRocket from '../assets/activities/activity-rocket.png';
+import activityTimer from '../assets/activities/activity-timer.png';
 import dotGreenSmall from '../assets/tea-menu/dot-green-small.svg';
 import dotGreen from '../assets/tea-menu/dot-green.svg';
 import dotOrange from '../assets/tea-menu/dot-orange.svg';
@@ -10,15 +10,29 @@ import dotPurple from '../assets/tea-menu/dot-purple.svg';
 import dotTeal from '../assets/tea-menu/dot-teal.svg';
 import logo from '../assets/tea-menu/logo.png';
 import mascot from '../assets/tea-menu/mascot.png';
-import { activityRoutes } from '../routes/activity-flow';
+import { activityRoutes, tdahFlow, titleFor } from '../routes/activity-flow';
 
-const menuItems = [
-  { label: 'Mini retos', icon: activityFlag, path: activityRoutes.miniChallenge },
-  { label: 'Recompensas visibles', icon: activityMedal, path: activityRoutes.rewards },
-  { label: 'Misiones rápidas', icon: activityRocket, path: activityRoutes.quickMissions },
-] as const;
+/**
+ * Las clases `tea-*` son las del nodo de Figma 92:2, que se reutiliza para
+ * ambos menús; el contenido de esta pantalla es el recorrido TDAH.
+ */
+const MENU_ICONS: Readonly<Record<string, string>> = {
+  [activityRoutes.miniChallenge]: activityFlag,
+  [activityRoutes.rewards]: activityMedal,
+  [activityRoutes.quickMissions]: activityTimer,
+};
 
-export function TeaMenuPage(): React.JSX.Element {
+/**
+ * La lista sale de `tdahFlow`, no de una copia a mano: así el menú no puede
+ * ofrecer una actividad que ya no esté en el recorrido ni olvidar una nueva.
+ */
+const menuItems = tdahFlow.steps.map((path) => ({
+  path,
+  label: titleFor(path),
+  icon: MENU_ICONS[path],
+}));
+
+export function TdahMenuPage(): React.JSX.Element {
   const navigate = useNavigate();
 
   return (
@@ -49,7 +63,12 @@ export function TeaMenuPage(): React.JSX.Element {
       <section className="tea-menu-panel" aria-labelledby="tdah-menu-title">
         <h1 id="tdah-menu-title">Elige una actividad</h1>
         <div className="tea-menu-tabs" aria-label="Perfil de actividades">
-          <button type="button" onClick={() => void navigate(activityRoutes.home)}>
+          <button
+            type="button"
+            onClick={() => void navigate(activityRoutes.home)}
+            aria-pressed="false"
+            aria-label="Ver las actividades TEA"
+          >
             TEA
           </button>
           <button className="is-active" type="button" aria-pressed="true">
@@ -59,9 +78,17 @@ export function TeaMenuPage(): React.JSX.Element {
         </div>
         <ul>
           {menuItems.map((item) => (
-            <li key={item.label}>
-              <button type="button" onClick={() => void navigate(item.path)}>
-                <img className="tdah-menu-icon" src={item.icon} alt="" />
+            <li key={item.path}>
+              <button
+                type="button"
+                onClick={() => void navigate(item.path)}
+                aria-label={`Abrir ${item.label}`}
+              >
+                {item.icon === undefined ? (
+                  <span aria-hidden="true" />
+                ) : (
+                  <img className="tdah-menu-icon" src={item.icon} alt="" />
+                )}
                 <span>{item.label}</span>
                 <span aria-hidden="true">›</span>
               </button>

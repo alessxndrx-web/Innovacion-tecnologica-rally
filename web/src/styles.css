@@ -337,6 +337,30 @@ body {
   inset: 0;
 }
 
+/*
+ * Estas capas ocupan la pantalla entera y se apilan una sobre otra, así que la
+ * de arriba se tragaba los clics de las de abajo: la lista de actividades caía
+ * encima de las pestañas TEA/TDAH y no se podía cambiar de perfil. Solo los
+ * controles reciben el puntero; los contenedores lo dejan pasar.
+ */
+.activities-brand,
+.activities-panel,
+.activities-tabs,
+.activities-list,
+.tea-brand,
+.tea-menu-panel {
+  pointer-events: none;
+}
+
+.activities-brand button,
+.activities-panel button,
+.activities-list li,
+.tea-brand button,
+.tea-menu-panel button,
+.tea-menu-panel li {
+  pointer-events: auto;
+}
+
 .activities-logo {
   position: absolute;
   top: 4.514%;
@@ -506,15 +530,59 @@ body {
 }
 
 .activities-list li:nth-child(2) {
-  top: 40.851%;
+  top: 37.12%;
 }
 
 .activities-list li:nth-child(3) {
-  top: 56.442%;
+  top: 48.97%;
 }
 
 .activities-list li:nth-child(4) {
-  top: 72.033%;
+  top: 60.83%;
+}
+
+.activities-list li:nth-child(5) {
+  top: 72.68%;
+}
+
+.activities-list li:nth-child(6) {
+  top: 84.54%;
+}
+
+/* «Colores y formas» no tiene icono exportado: se dibuja con las barras de
+   color de la marca, igual que las figuras de las demás actividades. */
+.activity-colors-icon {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  align-items: center;
+  justify-content: center;
+  gap: 9%;
+}
+
+.activity-colors-icon i {
+  display: block;
+  width: 9%;
+  height: 74%;
+  border-radius: 999px;
+  background: #6f52ae;
+}
+
+.activity-colors-icon i:nth-child(2) {
+  height: 92%;
+  background: #1fb2b6;
+}
+.activity-colors-icon i:nth-child(3) {
+  height: 62%;
+  background: #eb5e84;
+}
+.activity-colors-icon i:nth-child(4) {
+  height: 88%;
+  background: #ffc23c;
+}
+.activity-colors-icon i:nth-child(5) {
+  height: 70%;
+  background: #8dc548;
 }
 
 .activity-row {
@@ -540,9 +608,22 @@ body {
   outline-offset: 3px;
 }
 
+.activity-row,
+.activity-tab {
+  transition:
+    transform 150ms ease,
+    border-color 150ms ease,
+    background 150ms ease;
+}
+
 .activity-row:hover,
 .activity-tab:hover {
   background: #fffbf6;
+}
+
+.activity-row:hover {
+  transform: translateX(5px);
+  border-color: #1fb1b3;
 }
 
 .activity-icon {
@@ -714,7 +795,9 @@ body {
     margin-top: 1.5rem;
   }
 
-  .activities-list li {
+  .activities-list li:nth-child(n) {
+    position: relative;
+    top: auto;
     left: auto;
     width: 100%;
     height: 78px;
@@ -1582,8 +1665,8 @@ body {
 
 .classification-notice {
   top: 9.2%;
-  left: 31%;
-  width: 38%;
+  left: 20%;
+  width: 60%;
   color: #805229;
   font-size: clamp(0.85rem, min(1vw, 1.78vh), 1.3rem);
 }
@@ -1607,24 +1690,46 @@ body {
   padding: 0;
   border: 0;
   background: transparent;
-  cursor: pointer;
+  cursor: grab;
+  /* Sin esto, arrastrar con el dedo desplazaria la pantalla en vez de la figura. */
+  touch-action: none;
   transition:
     transform 180ms ease,
-    opacity 180ms ease;
+    filter 180ms ease;
 }
 
 .shape-option:hover {
   transform: translateY(-6px) scale(1.03);
 }
-.shape-option.is-sorted {
-  opacity: 0.18;
-  transform: scale(0.82);
+
+/* Mientras se arrastra manda la posicion en linea, asi que la transicion
+   sobraria: haria que la figura persiguiera al dedo con retraso. */
+.shape-option.is-dragging {
+  z-index: 8;
+  cursor: grabbing;
+  filter: drop-shadow(0 12px 16px rgb(39 52 60 / 28%));
+  transition: none;
+}
+
+.shape-option.is-selected {
+  outline: 4px solid #16abb2;
+  outline-offset: 6px;
+}
+
+.shape-option.is-rejected {
+  animation: answer-shake 330ms ease-in-out both;
 }
 .shape-option img {
   display: block;
   width: 100%;
   height: 100%;
   object-fit: contain;
+  -webkit-user-drag: none;
+}
+
+.shape-option,
+.shape-option img {
+  user-select: none;
 }
 .shape-teal {
   left: 4.6%;
@@ -1657,8 +1762,27 @@ body {
   top: 52.38%;
   width: 36.58%;
   height: 40.72%;
+  padding: 0;
   border: 3px dashed;
   border-radius: min(2.05vw, 3.65vh);
+  font: inherit;
+  cursor: pointer;
+  transition:
+    border-color 200ms ease,
+    background 200ms ease,
+    transform 200ms ease;
+}
+
+/* La caja se marca cuando hay algo que soltar en ella, no solo al pasar por
+   encima: quien juega con el teclado tambien tiene que ver donde puede dejarla. */
+.classification-bin.is-target {
+  border-style: solid;
+  transform: scale(1.015);
+}
+
+.classification-bin:focus-visible {
+  outline: 4px solid #2f7fbc;
+  outline-offset: 4px;
 }
 
 .blue-bin {
@@ -1671,31 +1795,63 @@ body {
   border-color: #72a42f;
   background: #b4e66d;
 }
-.blue-bin > img {
+.blue-bin > .bin-example,
+.green-bin > .bin-example {
   position: absolute;
-  top: 15%;
-  left: 8%;
-  width: 24.3%;
-  height: 47.2%;
-}
-.green-bin > span {
-  position: absolute;
-  top: 13%;
-  left: 10.3%;
-  width: 22.85%;
+  top: 7%;
+  left: 5%;
+  width: 13%;
+  height: auto;
   aspect-ratio: 1;
+  opacity: 0.42;
+}
+.green-bin > .bin-example {
   background: #8bc34a;
 }
-.sorted-circles {
-  position: absolute;
-  inset: 52% 6% 5%;
-  display: flex;
-  gap: 5%;
+/* Cada caja conserva su color al terminar; solo cambia el borde. Pintarlas las
+   dos de verde borraba la diferencia entre la celeste y la verde. */
+.classification-bin.is-complete {
+  border-style: solid;
+  border-color: #85c448;
+  animation: bin-complete 520ms ease-out both;
 }
-.sorted-circles img {
-  width: 21%;
-  object-fit: contain;
+
+@keyframes bin-complete {
+  0% {
+    transform: scale(1);
+  }
+  45% {
+    transform: scale(1.04);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.sorted-shapes {
+  position: absolute;
+  inset: 32% 5% 8%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4%;
+}
+.sorted-shape {
+  display: grid;
+  width: 22%;
+  aspect-ratio: 1;
+  place-items: center;
   animation: reward-pop 420ms ease-out both;
+}
+.sorted-shape img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.sorted-square {
+  width: 84%;
+  aspect-ratio: 1;
+  background: #7059a8;
 }
 
 .classification-mascot {
@@ -1726,8 +1882,11 @@ body {
 }
 
 .classification-continue {
-  right: 7%;
-  bottom: 5%;
+  top: 27%;
+  left: 50%;
+  /* La propiedad translate, no transform: la animacion de celebracion anima
+     transform y borraria el centrado. */
+  translate: -50% 0;
 }
 .classification-continue span,
 .matching-finish span {
@@ -1891,7 +2050,7 @@ body {
   background: #f55c7b;
 }
 .matching-finish {
-  right: 7%;
+  right: 26%;
   bottom: 4%;
 }
 
@@ -1921,6 +2080,15 @@ body {
     opacity: 1;
     transform: scale(1) rotate(0);
   }
+}
+
+/*
+ * Celebración compartida: las pantallas ponen esta clase en el control que
+ * aparece al acertar. Se usaba en cinco pantallas sin que existiera la regla,
+ * así que ninguna se animaba.
+ */
+.reward-pop {
+  animation: reward-pop 520ms cubic-bezier(0.2, 0.9, 0.3, 1.35) both;
 }
 
 @keyframes answer-shake {
@@ -2238,10 +2406,10 @@ body {
 
 .tea-logo-button {
   position: absolute;
-  top: 4.77%;
-  left: 5.37%;
-  width: 25.39%;
-  height: 20.49%;
+  top: 4.514%;
+  left: 9.277%;
+  width: 25.928%;
+  height: 20.92%;
   padding: 0;
   border: 0;
   background: transparent;
@@ -2256,8 +2424,8 @@ body {
 
 .tea-brand > p {
   position: absolute;
-  top: 26.91%;
-  left: 5.86%;
+  top: 26.302%;
+  left: 9.326%;
   margin: 0;
   font-size: clamp(1.25rem, min(1.51vw, 2.69vh), 1.9375rem);
   font-weight: 600;
@@ -2276,81 +2444,86 @@ body {
 }
 .tea-mascot {
   position: absolute;
-  top: 29.08%;
-  left: 24.66%;
-  width: 30.27%;
-  height: 59.9%;
+  top: 27.17%;
+  left: 12.02%;
+  width: 32.02%;
+  height: 65.1%;
   object-fit: contain;
 }
 .tea-dot {
   position: absolute;
 }
 .tea-dot-purple {
-  top: 41.23%;
-  left: 23.93%;
-  width: 2.54%;
+  top: 40.38%;
+  left: 11.23%;
+  width: 2.76%;
 }
 .tea-dot-teal {
-  top: 48.18%;
-  left: 19.87%;
-  width: 2.34%;
+  top: 47.93%;
+  left: 6.81%;
+  width: 2.54%;
 }
 .tea-dot-green {
-  top: 57.73%;
-  left: 18.07%;
-  width: 1.66%;
+  top: 58.31%;
+  left: 4.86%;
+  width: 1.8%;
 }
 .tea-dot-orange {
-  top: 67.71%;
-  left: 18.95%;
-  width: 2.2%;
+  top: 69.15%;
+  left: 5.81%;
+  width: 2.39%;
 }
 .tea-dot-pink {
-  top: 75.09%;
-  left: 22.95%;
-  width: 1.66%;
+  top: 77.17%;
+  left: 10.16%;
+  width: 1.8%;
 }
 .tea-dot-green-small {
-  top: 80.3%;
-  left: 27.83%;
-  width: 1.17%;
+  top: 82.83%;
+  left: 15.47%;
+  width: 1.27%;
 }
 
 .tea-menu-panel h1 {
   position: absolute;
-  top: 5.2%;
-  left: 63.48%;
+  top: 1.563%;
+  left: 57.031%;
+  width: 33.691%;
+  min-height: 6.944%;
   margin: 0;
-  font-size: clamp(2rem, min(2.34vw, 4.17vh), 3rem);
-  font-weight: 600;
+  display: flex;
+  align-items: center;
+  font-size: clamp(2rem, min(3.076vw, 5.469vh), 3.9375rem);
+  font-weight: 800;
 }
 
 .tea-menu-tabs {
   position: absolute;
-  top: 14.06%;
-  left: 62.5%;
-  width: 30.42%;
-  height: 9.38%;
+  top: 10.764%;
+  left: 56.934%;
+  width: 33.789%;
+  height: 9.462%;
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 2.4%;
+  gap: 0.72%;
 }
 
 .tea-menu-tabs button {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.55rem;
-  border: 1.5px solid #f5d0a2;
-  border-radius: 26px;
+  gap: min(0.684vw, 1.215vh);
+  border: 1.5px solid #f9d4a0;
+  border-radius: min(1.367vw, 2.431vh);
   background: #fff;
   color: #ff8e3a;
-  font: 800 clamp(1.65rem, min(2.2vw, 3.91vh), 2.8rem) var(--font-display);
+  font: 800 clamp(1.75rem, min(2.441vw, 4.34vh), 3.125rem) var(--font-display);
   cursor: pointer;
 }
 
 .tea-menu-tabs button.is-active {
-  border: 2px solid #ff8e3a;
+  border-width: 2px;
+  border-color: #ff8e3a;
 }
 
 .tea-menu-tabs button:focus-visible {
@@ -2360,9 +2533,9 @@ body {
 
 .tea-menu-panel ul {
   position: absolute;
-  top: 28.2%;
-  left: 62.5%;
-  width: 27.1%;
+  top: 25.26%;
+  left: 56.934%;
+  width: 33.545%;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -2370,40 +2543,53 @@ body {
 
 .tdah-menu-icon {
   display: block;
-  width: 54px;
-  height: 54px;
+  width: min(3.516vw, 6.25vh);
+  height: min(3.516vw, 6.25vh);
+  flex: 0 0 min(3.516vw, 6.25vh);
   object-fit: contain;
 }
 
+/* Mismo alto y mismo hueco que las filas del menu TEA. */
 .tea-menu-panel li + li {
-  margin-top: 1.91%;
+  margin-top: 6.129vh;
 }
 .tea-menu-panel li button {
   width: 100%;
-  height: min(9.38vh, 108px);
-  display: grid;
-  grid-template-columns: 82px 1fr 40px;
+  height: 9.462vh;
+  display: flex;
   align-items: center;
-  padding: 0 1.2rem;
-  border: 1.5px solid #f5d0a2;
-  border-radius: 28px;
+  gap: 4.076%;
+  overflow: hidden;
+  padding: 0 3.493% 0 4.076%;
+  border: 1.5px solid #f9d4a0;
+  border-radius: min(1.367vw, 2.431vh);
   background: #fff;
-  color: #1c1f1f;
-  font: 600 clamp(1.35rem, min(1.76vw, 3.13vh), 2.25rem) var(--font-display);
+  color: #27343c;
+  font: 800 clamp(1.35rem, min(1.904vw, 3.385vh), 2.4375rem) var(--font-display);
   text-align: left;
   cursor: pointer;
   transition:
     transform 150ms ease,
-    border-color 150ms ease;
+    border-color 150ms ease,
+    background 150ms ease;
 }
 
 .tea-menu-panel li button:hover {
   transform: translateX(5px);
   border-color: #1fb2b6;
+  background: #fffbf6;
+}
+.tea-menu-panel li button > span:nth-child(2) {
+  min-width: 0;
+  flex: 1;
+  white-space: nowrap;
 }
 .tea-menu-panel li button > span:last-child {
-  color: #f5d0a2;
-  font-size: 1.65em;
+  flex: 0 0 auto;
+  color: #f9d4a0;
+  font-size: clamp(2rem, min(2.686vw, 4.774vh), 3.4375rem);
+  font-weight: 600;
+  line-height: 1;
   text-align: right;
 }
 .tea-sequence-icon {
@@ -2662,6 +2848,15 @@ body {
   border-radius: 28px;
   background: #fff;
   cursor: pointer;
+  transition:
+    background 240ms ease,
+    border-color 240ms ease,
+    transform 180ms ease;
+}
+
+.mini-square:hover {
+  transform: translateY(-4px);
+  border-color: #5698d0;
 }
 .mini-square.is-blue {
   background: #5698d0;
@@ -2680,6 +2875,21 @@ body {
   gap: 5%;
   border-radius: min(3.03vw, 5.38vh);
   background: #f2eadb;
+  transition: background 300ms ease;
+}
+
+.mini-success.is-visible {
+  background: #eaf6d8;
+  animation: success-rise 420ms ease-out both;
+}
+
+@keyframes success-rise {
+  from {
+    transform: translateY(16px);
+  }
+  to {
+    transform: translateY(0);
+  }
 }
 .mini-mascot {
   position: absolute;
@@ -2927,26 +3137,24 @@ body {
 
 .quick-timer {
   position: absolute;
-  top: 12.2%;
-  left: 10.8%;
+  top: 10.5%;
+  left: 7.5%;
+  height: 10.5%;
   display: flex;
   align-items: center;
+  gap: 0.3rem;
   color: #263239;
 }
 
-.quick-timer span {
-  font-size: clamp(3rem, min(4.2vw, 7.47vh), 5.4rem);
-  line-height: 1;
-}
-
+.quick-timer span,
 .quick-timer strong {
-  margin-left: -0.45rem;
-  font-size: clamp(2rem, min(2.49vw, 4.43vh), 3.2rem);
+  font-size: clamp(1.4rem, min(2.1vw, 3.7vh), 2.9rem);
+  line-height: 1;
 }
 
 .quick-progress {
   position: absolute;
-  top: 14.4%;
+  top: 13.6%;
   left: 29.7%;
   width: 36.4%;
   height: 4.3%;
@@ -2978,37 +3186,45 @@ body {
 }
 
 .quick-stars span {
-  color: #ffc341;
-  font-size: clamp(2.5rem, min(3.71vw, 6.6vh), 4.75rem);
-  line-height: 1;
-  -webkit-text-stroke: 2px #ef942d;
-}
-
-.quick-stars span:last-child {
   color: #e9e6df;
-  -webkit-text-stroke: 0;
+  font-size: clamp(1.2rem, min(1.9vw, 3.4vh), 2.4rem);
+  line-height: 1;
+  transition: color 260ms ease;
 }
 
+.quick-stars span.is-earned {
+  color: #ffc341;
+  -webkit-text-stroke: 2px #ef942d;
+  animation: reward-pop 420ms ease-out both;
+}
+
+/*
+ * El ancho se limita tambien con la altura de la ventana. El tablero mide cinco
+ * columnas por dos filas: si solo dependiera del ancho, en una ventana ancha y
+ * baja la celda salia mucho mas ancha que alta y las figuras, que son
+ * cuadradas, se salian por debajo del recuadro.
+ */
 .quick-board {
   position: absolute;
   top: 24.1%;
-  left: 24.7%;
-  width: 51.6%;
+  left: 50%;
+  width: min(51.6%, 74vh);
   height: 38.2%;
   display: grid;
   grid-template-columns: repeat(5, 1fr);
   grid-template-rows: repeat(2, 1fr);
-  align-items: center;
-  justify-items: center;
-  padding: 3.2% 2.2%;
+  place-items: center;
+  padding: min(1.6vw, 2.2vh);
+  transform: translateX(-50%);
   border: 5px solid #f3cb94;
   border-radius: min(3.42vw, 6.08vh);
   background: #fff;
 }
 
+/* El lado se acota por las dos dimensiones, no solo por el ancho de la celda. */
 .quick-shape {
   position: relative;
-  width: 70%;
+  width: min(72%, 10.4vh);
   aspect-ratio: 1;
   padding: 0;
   border: 4px dashed transparent;
@@ -3075,17 +3291,22 @@ body {
 }
 
 .quick-shape.is-pink-heart > span {
-  inset: 0;
-}
-
-.quick-shape.is-pink-heart > span::before {
-  display: grid;
-  height: 100%;
-  place-items: center;
-  color: #f45a7b;
-  content: '♥';
-  font-size: clamp(4rem, min(6.25vw, 11.1vh), 8rem);
-  line-height: 1;
+  inset: 10%;
+  background: #f45a7b;
+  clip-path: polygon(
+    50% 100%,
+    14% 66%,
+    2% 44%,
+    4% 24%,
+    18% 10%,
+    36% 10%,
+    50% 24%,
+    64% 10%,
+    82% 10%,
+    96% 24%,
+    98% 44%,
+    86% 66%
+  );
 }
 
 .quick-shape.is-orange-triangle > span,
@@ -3161,6 +3382,35 @@ body {
 
 .quick-feedback span {
   font-size: clamp(0.9rem, min(1.17vw, 2.08vh), 1.5rem);
+}
+
+.quick-feedback {
+  transition:
+    border-color 300ms ease,
+    background 300ms ease;
+}
+
+.quick-feedback.is-complete {
+  border-color: #85c448;
+  background: #f1f9e4;
+}
+
+.quick-retry {
+  position: absolute;
+  right: -24%;
+  padding: 0.55rem 1.15rem;
+  border: 3px solid #fff;
+  border-radius: 999px;
+  background: #ff8e3a;
+  box-shadow: 0 5px 0 #d2701f;
+  color: #fff;
+  font: 600 clamp(0.85rem, min(1.17vw, 2.08vh), 1.4rem) var(--font-display);
+  cursor: pointer;
+}
+
+.quick-retry:focus-visible {
+  outline: 4px solid #25afb3;
+  outline-offset: 3px;
 }
 
 .quick-reward {
@@ -4404,5 +4654,768 @@ body {
     left: 10%;
     width: 80%;
     font-size: 0.75rem;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Barra de avance de las actividades.
+
+   Va fija sobre la pantalla, no dentro de cada diseno, porque cada actividad
+   coloca sus elementos en coordenadas propias y no habia ningun sitio comun
+   donde poner un continuar. Con ella se puede pasar de pantalla sin depender
+   de acertar el ejercicio.
+   --------------------------------------------------------------------------- */
+.activity-nav {
+  position: fixed;
+  z-index: 60;
+  right: clamp(0.7rem, 1.4vw, 1.6rem);
+  bottom: clamp(0.7rem, 1.4vh, 1.6rem);
+  display: flex;
+  align-items: center;
+  gap: clamp(0.4rem, 0.7vw, 0.75rem);
+  animation: nav-in 520ms 140ms cubic-bezier(0.2, 0.85, 0.3, 1) both;
+}
+
+.activity-nav button {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: clamp(0.45rem, 0.9vh, 0.75rem) clamp(0.9rem, 1.3vw, 1.5rem);
+  border-radius: 999px;
+  font: 700 clamp(0.9rem, min(1.15vw, 2vh), 1.35rem) var(--font-display);
+  cursor: pointer;
+  transition:
+    transform 160ms ease,
+    background 160ms ease;
+}
+
+.activity-nav-menu {
+  border: 2px solid #f9d4a0;
+  background: #fff;
+  color: #ff8e3a;
+}
+
+.activity-nav-next {
+  border: 2px solid #fff;
+  background: #1fb2b6;
+  box-shadow: 0 4px 0 #12868a;
+  color: #fff;
+}
+
+.activity-nav-next span:last-child {
+  font-size: 1.35em;
+  line-height: 1;
+}
+
+.activity-nav button:hover {
+  transform: translateY(-3px);
+}
+
+.activity-nav-next:hover {
+  background: #17a0a4;
+}
+
+.activity-nav button:active {
+  transform: translateY(1px);
+}
+
+.activity-nav button:focus-visible {
+  outline: 4px solid #6f52ae;
+  outline-offset: 3px;
+}
+
+/* ---------------------------------------------------------------------------
+   Rutina diaria y Colores y formas.
+
+   No vienen de Figma, asi que se construyen con una disposicion que se adapta
+   en lugar de con coordenadas fijas, y con las figuras dibujadas en CSS, igual
+   que las de clasificacion y misiones rapidas.
+   --------------------------------------------------------------------------- */
+.routine-page,
+.colors-page {
+  position: relative;
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(0.7rem, 1.6vh, 1.4rem);
+  overflow: auto;
+  padding: clamp(0.7rem, 1.6vh, 1.4rem);
+  background: #fff7eb;
+  color: #263239;
+  font-family: var(--font-display);
+}
+
+.routine-header,
+.colors-header {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
+  align-items: center;
+  gap: clamp(0.6rem, 1.5vw, 1.4rem);
+  padding: clamp(0.45rem, 1vh, 0.85rem) clamp(0.8rem, 1.6vw, 1.5rem);
+  border-radius: 999px;
+  color: #fff;
+}
+
+.routine-header {
+  background: #7359a8;
+}
+
+.colors-header {
+  background: #129e9d;
+}
+
+.routine-header h1,
+.colors-header h1 {
+  margin: 0;
+  font-size: clamp(1.3rem, min(2.2vw, 3.9vh), 2.6rem);
+  font-weight: 700;
+  text-align: center;
+}
+
+.routine-back,
+.colors-back {
+  position: relative;
+  width: clamp(38px, 3.2vw, 56px);
+  aspect-ratio: 1;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+}
+
+.routine-back img,
+.routine-back span,
+.colors-back img,
+.colors-back span {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  width: 100%;
+  height: 100%;
+  place-items: center;
+}
+
+/* La flecha va dentro del circulo blanco del SVG, asi que toma el color de la
+   cabecera; en blanco quedaba invisible sobre el propio circulo. */
+.routine-back span {
+  color: #7359a8;
+  font-size: clamp(1.1rem, 1.8vw, 1.9rem);
+}
+
+.colors-back span {
+  color: #129e9d;
+  font-size: clamp(1.1rem, 1.8vw, 1.9rem);
+}
+
+.routine-back:focus-visible,
+.colors-back:focus-visible {
+  outline: 4px solid #fff;
+  outline-offset: 3px;
+}
+
+.routine-progress,
+.colors-progress {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.3rem 0.85rem;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 22%);
+  font-size: clamp(0.95rem, min(1.4vw, 2.5vh), 1.6rem);
+  font-weight: 700;
+}
+
+.routine-avatar,
+.colors-avatar {
+  position: relative;
+  width: clamp(38px, 3.2vw, 56px);
+  aspect-ratio: 1;
+}
+
+.routine-avatar img,
+.colors-avatar img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.routine-avatar img:last-child,
+.colors-avatar img:last-child {
+  inset: 13%;
+  width: 74%;
+  height: 74%;
+  border-radius: 50%;
+}
+
+.routine-content,
+.colors-content {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(0.6rem, 1.4vh, 1.2rem);
+  padding: clamp(0.9rem, 2vh, 1.8rem) clamp(0.9rem, 2vw, 2rem) clamp(4.5rem, 9vh, 6.5rem);
+  border: 2px solid #f9d4a0;
+  border-radius: clamp(18px, 2.4vw, 34px);
+  background: #fff;
+}
+
+.routine-content h2,
+.colors-content h2 {
+  margin: 0;
+  font-size: clamp(1.3rem, min(2.4vw, 4.2vh), 2.5rem);
+  font-weight: 700;
+  text-align: center;
+}
+
+.routine-notice {
+  margin: 0;
+  color: #6a5b4d;
+  font-size: clamp(1rem, min(1.5vw, 2.7vh), 1.55rem);
+  text-align: center;
+}
+
+.routine-tray,
+.routine-line {
+  display: grid;
+  width: min(100%, 900px);
+  grid-template-columns: repeat(4, 1fr);
+  gap: clamp(0.5rem, 1.2vw, 1.1rem);
+}
+
+.routine-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: clamp(0.6rem, 1.4vh, 1.1rem) 0.4rem;
+  border: 3px solid #f9d4a0;
+  border-radius: clamp(14px, 1.8vw, 26px);
+  background: #fffdf8;
+  color: inherit;
+  font-family: inherit;
+  cursor: pointer;
+  transition:
+    transform 180ms ease,
+    border-color 180ms ease,
+    opacity 220ms ease;
+}
+
+.routine-card:hover:not(:disabled) {
+  transform: translateY(-5px);
+  border-color: #1fb2b6;
+}
+
+.routine-card.is-placed {
+  opacity: 0.32;
+  cursor: default;
+}
+
+.routine-card.is-wrong {
+  border-color: #f55c7b;
+  background: #fff2f5;
+  animation: answer-shake 330ms ease-in-out both;
+}
+
+.routine-card-label {
+  font-size: clamp(0.85rem, min(1.25vw, 2.2vh), 1.35rem);
+  font-weight: 700;
+  text-align: center;
+}
+
+.routine-icon {
+  position: relative;
+  display: block;
+  width: clamp(34px, 3.6vw, 62px);
+  aspect-ratio: 1;
+}
+
+.routine-icon.is-sun {
+  border-radius: 50%;
+  background: #ffc23c;
+  box-shadow: 0 0 0 clamp(4px, 0.5vw, 8px) #ffe7b0;
+}
+
+.routine-icon.is-cup {
+  border-radius: 12% 12% 42% 42%;
+  background: #1fb2b6;
+}
+
+.routine-icon.is-cup::after {
+  content: '';
+  position: absolute;
+  top: 22%;
+  right: -26%;
+  width: 34%;
+  height: 42%;
+  border: clamp(3px, 0.4vw, 6px) solid #1fb2b6;
+  border-left: 0;
+  border-radius: 0 50% 50% 0;
+}
+
+.routine-icon.is-shirt {
+  background: #eb5e84;
+  clip-path: polygon(
+    30% 0,
+    40% 9%,
+    60% 9%,
+    70% 0,
+    100% 18%,
+    87% 40%,
+    78% 33%,
+    78% 100%,
+    22% 100%,
+    22% 33%,
+    13% 40%,
+    0 18%
+  );
+}
+
+.routine-icon.is-backpack {
+  border-radius: 26% 26% 20% 20%;
+  background: #6f52ae;
+}
+
+.routine-icon.is-backpack::before {
+  content: '';
+  position: absolute;
+  top: 34%;
+  left: 22%;
+  width: 56%;
+  height: 26%;
+  border-radius: 5px;
+  background: #d9cff0;
+}
+
+.routine-line {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.routine-slot {
+  position: relative;
+  display: flex;
+  min-height: clamp(84px, 13vh, 148px);
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  border: 3px dashed #c9e7e8;
+  border-radius: clamp(14px, 1.8vw, 26px);
+  background: #f4fbfb;
+}
+
+.routine-slot.is-filled {
+  border-style: solid;
+  border-color: #85c448;
+  background: #f4fbe8;
+  animation: reward-pop 460ms cubic-bezier(0.2, 0.9, 0.3, 1.35) both;
+}
+
+.routine-slot-number {
+  position: absolute;
+  top: -0.65rem;
+  left: -0.45rem;
+  display: grid;
+  width: clamp(24px, 2.2vw, 36px);
+  aspect-ratio: 1;
+  place-items: center;
+  border-radius: 50%;
+  background: #ff8e3a;
+  color: #fff;
+  font-size: clamp(0.8rem, 1.1vw, 1.2rem);
+  font-weight: 800;
+}
+
+.routine-slot-empty {
+  width: 32%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: #e2f1f1;
+}
+
+.routine-mascot {
+  width: clamp(80px, 10vw, 160px);
+  object-fit: contain;
+}
+
+.routine-done,
+.colors-done {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.6rem 1.4rem;
+  border: 3px solid #fff;
+  border-radius: 999px;
+  background: #85c448;
+  box-shadow: 0 5px 0 #5c922c;
+  color: #fff;
+  font: 700 clamp(1rem, 1.5vw, 1.65rem) var(--font-display);
+  cursor: pointer;
+}
+
+.routine-done:focus-visible,
+.colors-done:focus-visible {
+  outline: 4px solid #6f52ae;
+  outline-offset: 3px;
+}
+
+.colors-board {
+  display: grid;
+  width: min(100%, 760px);
+  grid-template-columns: repeat(3, 1fr);
+  gap: clamp(0.6rem, 1.6vw, 1.5rem);
+}
+
+.colors-piece {
+  display: grid;
+  aspect-ratio: 1;
+  place-items: center;
+  padding: 8%;
+  border: 4px solid transparent;
+  border-radius: clamp(16px, 2vw, 30px);
+  background: #fffdf8;
+  cursor: pointer;
+  transition:
+    transform 180ms ease,
+    border-color 180ms ease,
+    background 180ms ease;
+}
+
+.colors-piece:hover:not(:disabled) {
+  transform: translateY(-5px);
+  border-color: #f9d4a0;
+}
+
+.routine-card:focus-visible,
+.colors-piece:focus-visible {
+  outline: 4px solid #1fb2b6;
+  outline-offset: 3px;
+}
+
+.colors-piece > span {
+  display: block;
+  width: 78%;
+  aspect-ratio: 1;
+}
+
+.colors-piece.is-circulo > span {
+  border-radius: 50%;
+}
+
+.colors-piece.is-cuadrado > span {
+  border-radius: 16%;
+}
+
+.colors-piece.is-triangulo > span {
+  clip-path: polygon(50% 4%, 100% 96%, 0 96%);
+}
+
+.colors-piece.is-azul > span {
+  background: #3f8fd2;
+}
+.colors-piece.is-verde > span {
+  background: #8dc548;
+}
+.colors-piece.is-naranja > span {
+  background: #ff9737;
+}
+.colors-piece.is-rosa > span {
+  background: #eb5e84;
+}
+.colors-piece.is-morado > span {
+  background: #6f52ae;
+}
+.colors-piece.is-amarillo > span {
+  background: #ffc23c;
+}
+
+.colors-piece.is-correct {
+  border-color: #85c448;
+  background: #f4fbe8;
+  animation: reward-pop 520ms cubic-bezier(0.2, 0.9, 0.3, 1.35) both;
+}
+
+.colors-piece.is-wrong {
+  border-color: #f55c7b;
+  background: #fff2f5;
+  animation: answer-shake 330ms ease-in-out both;
+}
+
+.colors-feedback {
+  display: flex;
+  width: min(100%, 760px);
+  align-items: center;
+  justify-content: center;
+  gap: clamp(0.6rem, 1.6vw, 1.5rem);
+  margin-top: auto;
+  padding: clamp(0.5rem, 1.2vh, 1rem) clamp(0.8rem, 1.6vw, 1.6rem);
+  border-radius: clamp(16px, 2vw, 30px);
+  background: #f2eadb;
+  transition: background 300ms ease;
+}
+
+.colors-feedback.is-complete {
+  background: #eaf6d8;
+}
+
+.colors-feedback strong {
+  font-size: clamp(1.05rem, min(1.9vw, 3.3vh), 2rem);
+}
+
+.colors-mascot {
+  width: clamp(58px, 6.5vw, 112px);
+  object-fit: contain;
+}
+
+.colors-done {
+  width: clamp(44px, 4vw, 66px);
+  aspect-ratio: 1;
+  justify-content: center;
+  padding: 0;
+  font-size: clamp(1.2rem, 2vw, 1.9rem);
+}
+
+@media (max-width: 900px), (max-aspect-ratio: 4 / 5) {
+  .routine-tray,
+  .routine-line,
+  .colors-board {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Movimiento compartido.
+
+   Cada pantalla entra, su cabecera baja y su contenido sube; las filas de los
+   menus aparecen escalonadas y las mascotas respiran. Todo queda anulado por
+   el bloque de movimiento reducido que cierra este fichero.
+   --------------------------------------------------------------------------- */
+@keyframes screen-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes header-drop {
+  from {
+    opacity: 0;
+    transform: translateY(-16px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes panel-rise {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes row-in {
+  from {
+    opacity: 0;
+    transform: translateX(28px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes tab-in {
+  from {
+    opacity: 0;
+    transform: scale(0.88);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes nav-in {
+  from {
+    opacity: 0;
+    transform: translateY(22px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes float-soft {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-9px);
+  }
+}
+
+@keyframes dot-drift {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  50% {
+    transform: translate(2px, -8px);
+  }
+}
+
+/* Solo la opacidad en la raiz de cada pantalla: una transformacion aqui
+   convertiria al elemento en el marco de referencia de la barra fija. */
+.activities-page,
+.tea-menu-page,
+.instruction-page,
+.sequence-page,
+.classification-page,
+.matching-page,
+.routine-page,
+.colors-page,
+.mini-page,
+.rewards-page,
+.quick-page,
+.question-notice-page {
+  animation: screen-fade 320ms ease both;
+}
+
+.sequence-header,
+.instruction-header,
+.classification-header,
+.matching-header,
+.routine-header,
+.colors-header,
+.mini-header,
+.rewards-header,
+.quick-header {
+  animation: header-drop 460ms cubic-bezier(0.2, 0.85, 0.3, 1) both;
+}
+
+.sequence-body,
+.instruction-content,
+.classification-content,
+.matching-content,
+.routine-content,
+.colors-content,
+.mini-content,
+.rewards-content,
+.quick-content {
+  animation: panel-rise 520ms 80ms cubic-bezier(0.2, 0.85, 0.3, 1) both;
+}
+
+.activities-list li,
+.tea-menu-panel li {
+  animation: row-in 420ms cubic-bezier(0.2, 0.85, 0.3, 1) both;
+}
+
+.activities-list li {
+  animation-delay: calc(var(--row-index, 0) * 65ms + 120ms);
+}
+
+.tea-menu-panel li:nth-child(1) {
+  animation-delay: 120ms;
+}
+.tea-menu-panel li:nth-child(2) {
+  animation-delay: 185ms;
+}
+.tea-menu-panel li:nth-child(3) {
+  animation-delay: 250ms;
+}
+
+.activity-tab,
+.tea-menu-tabs button {
+  animation: tab-in 380ms 60ms cubic-bezier(0.2, 0.85, 0.3, 1) both;
+}
+
+.activities-mascot,
+.tea-mascot,
+.sequence-mascot,
+.instruction-mascot,
+.classification-mascot,
+.routine-mascot,
+.colors-mascot,
+.mini-mascot,
+.rewards-mascot,
+.quick-mascot-wrap img {
+  animation: float-soft 4.6s ease-in-out infinite;
+}
+
+.colors-mascot,
+.mini-mascot {
+  animation-duration: 4.1s;
+}
+
+.mascot-dot,
+.tea-dot {
+  animation: dot-drift 5.2s ease-in-out infinite;
+}
+
+.mascot-dot:nth-child(2),
+.tea-dot:nth-child(2) {
+  animation-delay: -0.7s;
+}
+.mascot-dot:nth-child(3),
+.tea-dot:nth-child(3) {
+  animation-delay: -1.4s;
+}
+.mascot-dot:nth-child(4),
+.tea-dot:nth-child(4) {
+  animation-delay: -2.1s;
+}
+.mascot-dot:nth-child(5),
+.tea-dot:nth-child(5) {
+  animation-delay: -2.8s;
+}
+.mascot-dot:nth-child(6),
+.tea-dot:nth-child(6) {
+  animation-delay: -3.5s;
+}
+
+/* Respuesta al toque: sin ella, pulsar no se nota hasta que cambia la pantalla. */
+.activity-row:active,
+.activity-tab:active,
+.tea-menu-panel li button:active,
+.tea-menu-tabs button:active,
+.sequence-answer:active,
+.matching-option:active,
+.shape-option:active,
+.mini-square:active,
+.quick-shape:active,
+.routine-card:active:not(:disabled),
+.colors-piece:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
+/* Regla final sobre el movimiento: quien pida menos animación deja de verla en
+   toda la aplicación, incluidas las pantallas que se añadan después. Los
+   bloques por pantalla de más arriba enumeraban selectores y se quedaban
+   cortos en cuanto aparecía uno nuevo. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }

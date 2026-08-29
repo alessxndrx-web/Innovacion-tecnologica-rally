@@ -7,10 +7,13 @@ import kivoHappy from '../assets/instruction/kivo-happy.png';
 import pencil from '../assets/instruction/pencil.png';
 import progressActive from '../assets/instruction/progress-active.svg';
 import progressPending from '../assets/instruction/progress-pending.svg';
-import { activityRoutes } from '../routes/activity-flow';
+import { ActivityNav } from '../components/ActivityNav';
+import { ActivityProgress } from '../components/ActivityProgress';
+import { activityRoutes, flowStepFor, titleFor } from '../routes/activity-flow';
 
 export function InstructionPage(): React.JSX.Element {
   const navigate = useNavigate();
+  const step = flowStepFor(activityRoutes.instruction);
 
   return (
     <main className="instruction-page">
@@ -19,21 +22,20 @@ export function InstructionPage(): React.JSX.Element {
           <button
             className="instruction-back"
             type="button"
-            onClick={() => void navigate(activityRoutes.home)}
-            aria-label="Volver a actividades"
+            onClick={() => void navigate(step.previous)}
+            aria-label={`Volver a ${titleFor(step.previous)}`}
           >
             <img src={backButton} alt="" />
             <span aria-hidden="true">←</span>
           </button>
           <h1 id="instruction-title">Instrucción única</h1>
-          <div className="instruction-progress" aria-label="Progreso 1 de 4">
-            <span className="activity-progress-dots" aria-hidden="true">
-              {[0, 1, 2, 3].map((step) => (
-                <img key={step} src={step === 0 ? progressActive : progressPending} alt="" />
-              ))}
-            </span>
-            <span>1/4</span>
-          </div>
+          <ActivityProgress
+            className="instruction-progress"
+            dotsClassName="activity-progress-dots"
+            step={step}
+            activeIcon={progressActive}
+            pendingIcon={progressPending}
+          />
           <div className="instruction-avatar" aria-label="Perfil de Kivo">
             <img src={avatarFrame} alt="" />
             <img src={avatar} alt="Avatar de Kivo" />
@@ -55,8 +57,8 @@ export function InstructionPage(): React.JSX.Element {
           <button
             className="reward-check instruction-continue"
             type="button"
-            onClick={() => void navigate(activityRoutes.sequence)}
-            aria-label="Continuar a Secuencia Visual"
+            onClick={() => void navigate(step.next)}
+            aria-label={`Continuar a ${titleFor(step.next)}`}
           >
             <img src={checkCircle} alt="" />
             <span aria-hidden="true">✓</span>
@@ -64,6 +66,7 @@ export function InstructionPage(): React.JSX.Element {
           <span className="instruction-next-hint">Continuar</span>
         </div>
       </section>
+      <ActivityNav step={step} />
     </main>
   );
 }

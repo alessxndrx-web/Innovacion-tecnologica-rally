@@ -49,7 +49,7 @@ export function RegisterPage(): React.JSX.Element {
   const [submitting, setSubmitting] = useState(false);
 
   if (status === 'authenticated') {
-    return <Navigate to="/actividades" replace />;
+    return <Navigate to={activityRoutes.home} replace />;
   }
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
@@ -67,7 +67,7 @@ export function RegisterPage(): React.JSX.Element {
     setSubmitting(true);
     try {
       await signUp({ fullName: trimmedName, email: trimmedEmail, password, role });
-      void navigate(activityRoutes.home, { replace: true });
+      void navigate(activityRoutes.questionNotice, { replace: true });
     } catch (caught) {
       setError(
         messageForError(caught, {
@@ -193,7 +193,7 @@ export function RegisterPage(): React.JSX.Element {
 
         <p className="register-footer">
           ¿Ya tienes una cuenta?{' '}
-          <Link className="register-footer-link" to="/login">
+          <Link className="register-footer-link" to={activityRoutes.login}>
             Inicia sesión
           </Link>
         </p>

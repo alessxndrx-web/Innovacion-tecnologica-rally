@@ -4,6 +4,7 @@ import { messageForError } from '../api/error-messages';
 import googleIcon from '../assets/google-icon.svg';
 import kivoLogo from '../assets/kivo-logo.png';
 import { useAuth } from '../auth/useAuth';
+import { activityRoutes } from '../routes/activity-flow';
 
 /**
  * Aviso mostrado al pulsar una opción que todavía no tiene backend.
@@ -31,7 +32,7 @@ export function LoginPage(): React.JSX.Element {
   const [submitting, setSubmitting] = useState(false);
 
   if (status === 'authenticated') {
-    return <Navigate to="/actividades" replace />;
+    return <Navigate to={activityRoutes.home} replace />;
   }
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
@@ -47,7 +48,7 @@ export function LoginPage(): React.JSX.Element {
     setSubmitting(true);
     try {
       await signIn(trimmedEmail, password);
-      void navigate('/actividades', { replace: true });
+      void navigate(activityRoutes.home, { replace: true });
     } catch (caught) {
       setFeedback({ kind: 'error', text: messageForError(caught) });
     } finally {
@@ -125,7 +126,7 @@ export function LoginPage(): React.JSX.Element {
           </button>
 
           <div className="auth-links">
-            <Link className="auth-link" to="/register">
+            <Link className="auth-link" to={activityRoutes.register}>
               Crear una cuenta
             </Link>
             <button

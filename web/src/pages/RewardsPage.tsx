@@ -7,27 +7,30 @@ import fiveStars from '../assets/rewards/five-stars.svg';
 import mascot from '../assets/rewards/mascot.png';
 import progressActive from '../assets/rewards/progress-active.svg';
 import progressPending from '../assets/rewards/progress-pending.svg';
-import { activityRoutes } from '../routes/activity-flow';
+import { ActivityNav } from '../components/ActivityNav';
+import { activityRoutes, flowStepFor, titleFor } from '../routes/activity-flow';
 
 export function RewardsPage(): React.JSX.Element {
   const navigate = useNavigate();
+  const step = flowStepFor(activityRoutes.rewards);
+
   return (
     <main className="rewards-page">
       <header className="rewards-header">
         <button
           type="button"
           className="rewards-back"
-          onClick={() => void navigate(activityRoutes.tdahMenu)}
-          aria-label="Volver al menú TDAH"
+          onClick={() => void navigate(step.previous)}
+          aria-label={`Volver a ${titleFor(step.previous)}`}
         >
           <img src={back} alt="" />
           <span aria-hidden="true">←</span>
         </button>
         <h1>Recompensas visibles</h1>
-        <div className="rewards-progress" aria-label="Progreso 1 de 1">
-          <span>
-            {[0, 1, 2].map((step) => (
-              <img key={step} src={step < 2 ? progressActive : progressPending} alt="" />
+        <div className="rewards-progress" aria-label="Recompensa 1 de 1">
+          <span aria-hidden="true">
+            {[0, 1, 2].map((dot) => (
+              <img key={dot} src={dot < 2 ? progressActive : progressPending} alt="" />
             ))}
           </span>
           <b>1/1</b>
@@ -44,13 +47,14 @@ export function RewardsPage(): React.JSX.Element {
         <button
           type="button"
           className="rewards-earned"
-          onClick={() => void navigate(activityRoutes.quickMissions)}
-          aria-label="Aceptar recompensa y continuar a Misiones rápidas"
+          onClick={() => void navigate(step.next)}
+          aria-label={`Aceptar la recompensa y continuar a ${titleFor(step.next)}`}
         >
           <img src={coin} alt="" />
           <strong>+ 5</strong>
         </button>
       </section>
+      <ActivityNav step={step} menu={activityRoutes.tdahMenu} />
     </main>
   );
 }

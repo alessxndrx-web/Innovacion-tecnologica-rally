@@ -5,7 +5,8 @@ import avatar from '../assets/mini-challenge/avatar.png';
 import back from '../assets/mini-challenge/back.svg';
 import mascot from '../assets/mini-challenge/mascot.png';
 import coin from '../assets/rewards/coin.svg';
-import { activityRoutes } from '../routes/activity-flow';
+import { ActivityNav } from '../components/ActivityNav';
+import { activityRoutes, flowStepFor, titleFor } from '../routes/activity-flow';
 
 type ShapeId =
   | 'purple-top'
@@ -19,57 +20,118 @@ type ShapeId =
   | 'purple-bottom'
   | 'green-triangle';
 
-const TARGETS = new Set<ShapeId>(['teal-top', 'teal-bottom', 'purple-bottom']);
+interface Shape {
+  id: ShapeId;
+  className: string;
+  label: string;
+  isCircle: boolean;
+}
 
-const shapes: Array<{ id: ShapeId; className: string; label: string }> = [
-  { id: 'purple-top', className: 'is-purple-circle', label: 'Círculo morado' },
-  { id: 'green-square', className: 'is-green-square', label: 'Cuadrado verde' },
-  { id: 'teal-top', className: 'is-teal-circle', label: 'Círculo turquesa' },
-  { id: 'yellow-star', className: 'is-yellow-star', label: 'Estrella amarilla' },
-  { id: 'pink-square', className: 'is-pink-square', label: 'Cuadrado rosado' },
-  { id: 'orange-triangle', className: 'is-orange-triangle', label: 'Triángulo naranja' },
-  { id: 'teal-bottom', className: 'is-teal-circle', label: 'Círculo turquesa' },
-  { id: 'pink-heart', className: 'is-pink-heart', label: 'Corazón rosado' },
-  { id: 'purple-bottom', className: 'is-purple-circle', label: 'Círculo morado' },
-  { id: 'green-triangle', className: 'is-green-triangle', label: 'Triángulo verde' },
+/** Los dos minutos del enunciado, en segundos. */
+const TOTAL_SECONDS = 120;
+
+/** Círculos que hay que encontrar; el tablero contiene uno de más. */
+const CIRCLES_TO_FIND = 3;
+
+/**
+ * Cada figura declara si es un círculo. Antes había una lista aparte con tres
+ * identificadores «correctos», y dejaba fuera a un círculo que sí está en el
+ * tablero: tocarlo se contaba como error.
+ */
+const shapes: Shape[] = [
+  { id: 'purple-top', className: 'is-purple-circle', label: 'Círculo morado', isCircle: true },
+  { id: 'green-square', className: 'is-green-square', label: 'Cuadrado verde', isCircle: false },
+  { id: 'teal-top', className: 'is-teal-circle', label: 'Círculo turquesa', isCircle: true },
+  { id: 'yellow-star', className: 'is-yellow-star', label: 'Estrella amarilla', isCircle: false },
+  { id: 'pink-square', className: 'is-pink-square', label: 'Cuadrado rosado', isCircle: false },
+  {
+    id: 'orange-triangle',
+    className: 'is-orange-triangle',
+    label: 'Triángulo naranja',
+    isCircle: false,
+  },
+  { id: 'teal-bottom', className: 'is-teal-circle', label: 'Círculo turquesa', isCircle: true },
+  { id: 'pink-heart', className: 'is-pink-heart', label: 'Corazón rosado', isCircle: false },
+  { id: 'purple-bottom', className: 'is-purple-circle', label: 'Círculo morado', isCircle: true },
+  {
+    id: 'green-triangle',
+    className: 'is-green-triangle',
+    label: 'Triángulo verde',
+    isCircle: false,
+  },
 ];
+
+const circleIds = new Set(shapes.filter((shape) => shape.isCircle).map((shape) => shape.id));
 
 export function QuickMissionsPage(): React.JSX.Element {
   const navigate = useNavigate();
-  const [selected, setSelected] = useState<Set<ShapeId>>(
-    () => new Set(['teal-top', 'teal-bottom', 'purple-bottom']),
-  );
-  const [seconds, setSeconds] = useState(105);
-  const [notice, setNotice] = useState('Has encontrado 3 círculos');
+  const step = flowStepFor(activityRoutes.quickMissions);
+  const [selected, setSelected] = useState<ReadonlySet<ShapeId>>(() => new Set());
+  const [seconds, setSeconds] = useState(TOTAL_SECONDS);
+  const [lastPickWasWrong, setLastPickWasWrong] = useState(false);
 
-  const isComplete = useMemo(
-    () => selected.size === TARGETS.size && [...TARGETS].every((id) => selected.has(id)),
-    [selected],
-  );
+  const found = useMemo(() => [...selected].filter((id) => circleIds.has(id)).length, [selected]);
+  const isComplete = found >= CIRCLES_TO_FIND;
+  const timeIsUp = seconds === 0;
 
+  /**
+   * El reloj corre solo mientras la misión sigue abierta. Las dependencias son
+   * las dos banderas y no `seconds`: si dependiera del segundo actual, el
+   * intervalo se recrearía en cada tic.
+   */
   useEffect(() => {
-    if (isComplete || seconds === 0) return;
-    const timer = window.setInterval(() => setSeconds((value) => Math.max(0, value - 1)), 1000);
-    return () => window.clearInterval(timer);
-  }, [isComplete, seconds]);
+    if (isComplete || timeIsUp) {
+      return;
+    }
 
-  const selectShape = (id: ShapeId): void => {
+    const timer = window.setInterval(() => {
+      setSeconds((value) => Math.max(0, value - 1));
+    }, 1000);
+
+    return () => {
+      window.clearInterval(timer);
+    };
+  }, [isComplete, timeIsUp]);
+
+  const selectShape = (shape: Shape): void => {
+    if (isComplete || timeIsUp) {
+      return;
+    }
+
+    setLastPickWasWrong(!shape.isCircle);
     setSelected((current) => {
       const next = new Set(current);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      const correctCount = [...TARGETS].filter((target) => next.has(target)).length;
-      setNotice(
-        TARGETS.has(id)
-          ? `Has encontrado ${String(correctCount)} de 3 círculos`
-          : 'Esa figura no forma parte de los 3 círculos. Intenta otra vez.',
-      );
+      if (next.has(shape.id)) {
+        next.delete(shape.id);
+      } else {
+        next.add(shape.id);
+      }
       return next;
     });
   };
 
+  /** Sin esto, agotar el tiempo dejaba la pantalla sin ninguna salida. */
+  const restart = (): void => {
+    setSelected(new Set());
+    setSeconds(TOTAL_SECONDS);
+    setLastPickWasWrong(false);
+  };
+
   const minutes = Math.floor(seconds / 60);
   const remainingSeconds = String(seconds % 60).padStart(2, '0');
+
+  const headline = isComplete
+    ? '¡Muy bien!'
+    : timeIsUp
+      ? '¡Se acabó el tiempo!'
+      : '¡Sigue buscando!';
+  const detail = isComplete
+    ? `Encontraste los ${String(CIRCLES_TO_FIND)} círculos.`
+    : timeIsUp
+      ? 'Vuelve a intentarlo cuando quieras.'
+      : lastPickWasWrong
+        ? 'Esa figura no es un círculo. Prueba con otra.'
+        : `Has encontrado ${String(found)} de ${String(CIRCLES_TO_FIND)} círculos.`;
 
   return (
     <main className="quick-page">
@@ -77,8 +139,8 @@ export function QuickMissionsPage(): React.JSX.Element {
         <button
           className="quick-back"
           type="button"
-          onClick={() => void navigate(activityRoutes.tdahMenu)}
-          aria-label="Volver al menú TDAH"
+          onClick={() => void navigate(step.previous)}
+          aria-label={`Volver a ${titleFor(step.previous)}`}
         >
           <img src={back} alt="" />
           <span aria-hidden="true">←</span>
@@ -95,7 +157,9 @@ export function QuickMissionsPage(): React.JSX.Element {
       </header>
 
       <section className="quick-content" aria-labelledby="quick-instruction">
-        <h2 id="quick-instruction">¡Encuentra 3 círculos en 2 minutos!</h2>
+        <h2 id="quick-instruction">
+          ¡Encuentra {CIRCLES_TO_FIND} círculos en {TOTAL_SECONDS / 60} minutos!
+        </h2>
         <div
           className="quick-timer"
           aria-label={`Tiempo restante ${String(minutes)} minutos y ${remainingSeconds} segundos`}
@@ -106,12 +170,17 @@ export function QuickMissionsPage(): React.JSX.Element {
           </strong>
         </div>
         <div className="quick-progress" aria-hidden="true">
-          <span style={{ width: `${String((seconds / 120) * 100)}%` }} />
+          <span style={{ width: `${String((seconds / TOTAL_SECONDS) * 100)}%` }} />
         </div>
-        <div className="quick-stars" aria-label="2 de 3 estrellas">
-          <span>★</span>
-          <span>★</span>
-          <span>★</span>
+        <div
+          className="quick-stars"
+          aria-label={`${String(found)} de ${String(CIRCLES_TO_FIND)} círculos encontrados`}
+        >
+          {Array.from({ length: CIRCLES_TO_FIND }, (_, index) => (
+            <span key={index} className={index < found ? 'is-earned' : ''} aria-hidden="true">
+              ★
+            </span>
+          ))}
         </div>
 
         <div className="quick-board" aria-label="Tablero de figuras">
@@ -120,7 +189,7 @@ export function QuickMissionsPage(): React.JSX.Element {
               key={shape.id}
               className={`quick-shape ${shape.className}${selected.has(shape.id) ? ' is-selected' : ''}`}
               type="button"
-              onClick={() => selectShape(shape.id)}
+              onClick={() => selectShape(shape)}
               aria-label={shape.label}
               aria-pressed={selected.has(shape.id)}
             >
@@ -140,21 +209,27 @@ export function QuickMissionsPage(): React.JSX.Element {
           aria-live="polite"
         >
           <div>
-            <strong>{isComplete ? '¡Muy bien!' : '¡Sigue buscando!'}</strong>
-            <span>{notice}</span>
+            <strong>{headline}</strong>
+            <span>{detail}</span>
           </div>
           {isComplete && (
             <button
               className="quick-reward reward-pop"
               type="button"
-              onClick={() => void navigate(activityRoutes.tdahMenu)}
-              aria-label="Recoger recompensa y volver al menú TDAH"
+              onClick={() => void navigate(step.next)}
+              aria-label={`Recoger la recompensa y volver a ${titleFor(step.next)}`}
             >
               <img src={coin} alt="" />
             </button>
           )}
+          {timeIsUp && !isComplete && (
+            <button className="quick-retry" type="button" onClick={restart}>
+              Volver a intentarlo
+            </button>
+          )}
         </div>
       </section>
+      <ActivityNav step={step} menu={activityRoutes.tdahMenu} />
     </main>
   );
 }
